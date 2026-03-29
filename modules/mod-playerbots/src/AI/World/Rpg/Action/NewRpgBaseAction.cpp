@@ -60,16 +60,23 @@ bool NewRpgBaseAction::MoveFarTo(WorldPosition dest)
         // Unfortunately we've been stuck here for over 5 mins, fallback to teleporting directly to the destination
         botAI->rpgInfo.stuckTs = getMSTime();
         botAI->rpgInfo.stuckAttempts = 0;
+        WorldPosition safeDest = dest;
+        if (!safeDest.NormalizePositionForTeleport(bot))
+        {
+            LOG_DEBUG("playerbots", "[New RPG] Skip teleport for {} due to invalid destination ({},{},{},{})",
+                      bot->GetName(), dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), dest.GetMapId());
+            return false;
+        }
         const AreaTableEntry* entry = sAreaTableStore.LookupEntry(bot->GetZoneId());
         std::string zone_name = PlayerbotAI::GetLocalizedAreaName(entry);
         LOG_DEBUG(
             "playerbots",
             "[New RPG] Teleport {} from ({},{},{},{}) to ({},{},{},{}) as it stuck when moving far - Zone: {} ({})",
             bot->GetName(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot->GetMapId(),
-            dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), dest.GetMapId(), bot->GetZoneId(),
-            zone_name);
+            safeDest.GetPositionX(), safeDest.GetPositionY(), safeDest.GetPositionZ(), safeDest.GetMapId(),
+            bot->GetZoneId(), zone_name);
         bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
-        return bot->TeleportTo(dest);
+        return bot->TeleportTo(safeDest);
     }
 
     float dis = bot->GetExactDist(dest);

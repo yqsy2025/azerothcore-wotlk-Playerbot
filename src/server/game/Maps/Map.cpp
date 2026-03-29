@@ -3034,7 +3034,33 @@ bool Map::CheckCollisionAndGetValidCoords(WorldObject const* source, float start
     // Prevent invalid coordinates here, position is unchanged
     if (!Acore::IsValidMapCoord(startX, startY, startZ) || !Acore::IsValidMapCoord(destX, destY, destZ))
     {
-        LOG_FATAL("maps", "Map::CheckCollisionAndGetValidCoords invalid coordinates startX: {}, startY: {}, startZ: {}, destX: {}, destY: {}, destZ: {}", startX, startY, startZ, destX, destY, destZ);
+
+        LOG_FATAL("maps", "Map::CheckCollisionAndGetValidCoords invalid coordinates startX: {}, startY: {}, startZ: {}, destX: {}, destY: {}, destZ: {}, sourceID: {}, sourceName: {}",
+            startX, startY, startZ, destX, destY, destZ);
+
+        // 使用 const_cast 转换 const WorldObject* 为 WorldObject*，然后调用 ToPlayer()
+        Player* player = const_cast<WorldObject*>(source)->ToPlayer();
+        if (player)
+        {
+            // 设定一个安全位置，地图 ID 530，坐标 (-1915.1218f, 5534.347f, -12.0f)
+            uint32 safeMapId = 530;  // 目标地图 ID
+            float safeX = -1915.1218f;
+            float safeY = 5534.347f;
+            float safeZ = -12.0f;
+            float safeOrientation = 0.0f;  // 假设朝向为0，如果需要可以修改
+
+            // 将目标位置更新为安全位置
+            destX = safeX;
+            destY = safeY;
+            destZ = safeZ;
+
+            LOG_FATAL("maps", "Map::CheckCollisionAndGetValidCoords invalid coordinates startX: {}, startY: {}, startZ: {}, destX: {}, destY: {}, destZ: {}, sourceID: {}, sourceName: {}",
+                startX, startY, startZ, destX, destY, destZ, source->GetEntry(), source->GetName());
+            // 只有当 source 是 Player 对象时才调用 TeleportTo
+            player->TeleportTo(safeMapId, safeX, safeY, safeZ, safeOrientation);
+        }
+
+        // 返回false，表示无效路径，已经将目标位置修复为安全位置
         return false;
     }
 
