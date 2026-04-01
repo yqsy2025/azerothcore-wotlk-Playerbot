@@ -23,7 +23,6 @@
 #include "Cell.h"
 #include "CellImpl.h"
 #include "Chat.h"
-#include "CreatureScript.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
 #include "Group.h"
@@ -1021,7 +1020,7 @@ class spell_gen_mod_radius_by_caster_scale : public SpellScript
     }
 };
 
-// 15600 - Hand of Justice正义之手
+// 15600 - Hand of Justice
 
 class spell_gen_proc_reduced_above_60 : public AuraScript
 {
@@ -1030,8 +1029,8 @@ class spell_gen_proc_reduced_above_60 : public AuraScript
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         // Xinef: mostly its 33.(3)% reduce by 70 and 66.(6)% by 80
-        if (eventInfo.GetActor() && eventInfo.GetActor()->GetLevel() > 70)//修改为70级以上减少33.3%，80级以上减少66.6%
-            if (roll_chance_f((eventInfo.GetActor()->GetLevel() - 70) * 3.33f))
+        if (eventInfo.GetActor() && eventInfo.GetActor()->GetLevel() > 60)
+            if (roll_chance_f((eventInfo.GetActor()->GetLevel() - 60) * 3.33f))
                 return false;
 
         return true;

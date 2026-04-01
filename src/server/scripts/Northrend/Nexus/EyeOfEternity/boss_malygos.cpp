@@ -56,40 +56,40 @@ enum MovementInformPoints
 
 enum MalygosSpells
 {
-    SPELL_BERSERK = 64238,
-    SPELL_ARCANE_BREATH = 56272,
-    SPELL_ARCANE_STORM = 61693,
+    SPELL_BERSERK                       = 64238,
+    SPELL_ARCANE_BREATH                 = 56272,
+    SPELL_ARCANE_STORM                  = 61693,
 
-    SPELL_VORTEX_1 = 56237,
-    SPELL_VORTEX_VISUAL = 55873,
-    SPELL_VORTEX_DUMMY = 56105,
-    SPELL_VORTEX_TELEPORT = 73040,
-    SPELL_VORTEX_CONTROL_VEHICLE = 56263,
+    SPELL_VORTEX_1                      = 56237,
+    SPELL_VORTEX_VISUAL                 = 55873,
+    SPELL_VORTEX_DUMMY                  = 56105,
+    SPELL_VORTEX_TELEPORT               = 73040,
+    SPELL_VORTEX_CONTROL_VEHICLE        = 56263,
 
-    SPELL_ARCANE_OVERLOAD = 56430,
-    SPELL_ARCANE_OVERLOAD_SUMMON = 56429,
-    SPELL_ARCANE_OVERLOAD_AURA = 56432,
-    SPELL_ARCANE_OVERLOAD_DMG = 56431,
-    SPELL_ARCANE_OVERLOAD_SIZE = 56435,
-    SPELL_ARCANE_OVERLOAD_PROTECTION = 56438,
+    SPELL_ARCANE_OVERLOAD               = 56430,
+    SPELL_ARCANE_OVERLOAD_SUMMON        = 56429,
+    SPELL_ARCANE_OVERLOAD_AURA          = 56432,
+    SPELL_ARCANE_OVERLOAD_DMG           = 56431,
+    SPELL_ARCANE_OVERLOAD_SIZE          = 56435,
+    SPELL_ARCANE_OVERLOAD_PROTECTION    = 56438,
 
-    SPELL_SURGE_OF_POWER = 56505,
-    SPELL_SURGE_OF_POWER_DMG = 56548,
+    SPELL_SURGE_OF_POWER                = 56505,
+    SPELL_SURGE_OF_POWER_DMG            = 56548,
 
-    SPELL_DESTROY_PLATFORM_EFFECT = 59099,
-    SPELL_DESTROY_PLATFORM_VISUAL = 59084,
+    SPELL_DESTROY_PLATFORM_EFFECT       = 59099,
+    SPELL_DESTROY_PLATFORM_VISUAL       = 59084,
 
-    SPELL_ARCANE_PULSE = 57432,
-    SPELL_PH3_SURGE_OF_POWER = 57407,
-    SPELL_PH3_SURGE_OF_POWER_25 = 60936,
+    SPELL_ARCANE_PULSE                  = 57432,
+    SPELL_PH3_SURGE_OF_POWER            = 57407,
+    SPELL_PH3_SURGE_OF_POWER_25         = 60936,
     SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 = 60939,
 
-    SPELL_RIDE_RED_DRAGON_BUDDY = 56071,
+    SPELL_RIDE_RED_DRAGON_BUDDY         = 56071,
 
-    SPELL_STATIC_FIELD_MAIN = 57430,
-    SPELL_STATIC_FIELD_SUMMON = 57431,
-    SPELL_STATIC_FIELD_AURA = 57428,
-    SPELL_STATIC_FIELD_DAMAGE = 57429,
+    SPELL_STATIC_FIELD_MAIN             = 57430,
+    SPELL_STATIC_FIELD_SUMMON           = 57431,
+    SPELL_STATIC_FIELD_AURA             = 57428,
+    SPELL_STATIC_FIELD_DAMAGE           = 57429,
 };
 
 enum MalygosEvents
@@ -165,18 +165,18 @@ enum Texts
     EMOTE_SURGE_OF_POWER_WARNING_P3,
     EMOTE_BERSERK,
 
-    EMOTE_POWER_SPARK = 0,
+    EMOTE_POWER_SPARK     = 0,
 
-    SAY_ALEXSTRASZA_ONE = 0,
-    SAY_ALEXSTRASZA_TWO = 1,
+    SAY_ALEXSTRASZA_ONE   = 0,
+    SAY_ALEXSTRASZA_TWO   = 1,
     SAY_ALEXSTRASZA_THREE = 2,
-    SAY_ALEXSTRASZA_FOUR = 3,
+    SAY_ALEXSTRASZA_FOUR  = 3,
 };
 
 enum MalygosData
 {
     DATA_FIRST_SURGE_TARGET_GUID = 14,
-    NUM_MAX_SURGE_TARGETS = 3,
+    NUM_MAX_SURGE_TARGETS        = 3,
 };
 
 enum Phases
@@ -192,16 +192,16 @@ enum Phases
 
 enum MalygosLightOverrides
 {
-    LIGHT_GET_DEFAULT_FOR_MAP = 0,
-    LIGHT_OBSCURE_SPACE = 1822,
-    LIGHT_CHANGE_DIMENSIONS = 1823,
-    LIGHT_ARCANE_RUNES = 1824,
-    LIGHT_OBSCURE_ARCANE_RUNES = 1825,
+    LIGHT_GET_DEFAULT_FOR_MAP        = 0,
+    LIGHT_OBSCURE_SPACE              = 1822,
+    LIGHT_CHANGE_DIMENSIONS          = 1823,
+    LIGHT_ARCANE_RUNES               = 1824,
+    LIGHT_OBSCURE_ARCANE_RUNES       = 1825,
 };
 
 struct boss_malygos : public BossAI
 {
-    boss_malygos(Creature* creature) : BossAI(creature, DATA_MALYGOS) {}
+    boss_malygos(Creature* creature) : BossAI(creature, DATA_MALYGOS) { }
 
     uint32 timer1, timer2;
     uint8 IntroCounter;
@@ -632,13 +632,13 @@ struct boss_malygos : public BossAI
             me->GetThreatMgr().ClearAllThreat(); // players on vehicle are unattackable -> leads to EnterEvadeMode() because target is not acceptable!
 
             me->GetMap()->DoForAllPlayers([&](Player* player)
+            {
+                if (player->IsAlive() && !player->IsGameMaster())
                 {
-                    if (player->IsAlive() && !player->IsGameMaster())
-                    {
-                        sScriptMgr->AnticheatSetUnderACKmount(player);
-                        player->CastSpell(player, SPELL_SUMMON_RED_DRAGON_BUDDY, true);
-                    }
-                });
+                    sScriptMgr->AnticheatSetUnderACKmount(player);
+                    player->CastSpell(player, SPELL_SUMMON_RED_DRAGON_BUDDY, true);
+                }
+            });
 
             DoZoneInCombat();
 
@@ -681,9 +681,9 @@ struct boss_malygos : public BossAI
                     _surgeTargetGUID[i].Clear();
                 me->CastSpell((Unit*)nullptr, SPELL_SURGE_OF_POWER_WARN_SELECTOR_25, true);
                 me->m_Events.AddEventAtOffset([this]
-                    {
-                        me->CastSpell((Unit*)nullptr, SPELL_PH3_SURGE_OF_POWER_25, true);
-                    }, 3s);
+                {
+                    me->CastSpell((Unit*)nullptr, SPELL_PH3_SURGE_OF_POWER_25, true);
+                }, 3s);
             }
             else
             {
@@ -695,10 +695,10 @@ struct boss_malygos : public BossAI
                                 Talk(EMOTE_SURGE_OF_POWER_WARNING_P3, player);
                     ObjectGuid targetGuid = target->GetGUID();
                     me->m_Events.AddEventAtOffset([this, targetGuid]
-                        {
-                            if (Unit* delayedTarget = ObjectAccessor::GetUnit(*me, targetGuid))
-                                me->CastSpell(delayedTarget, SPELL_PH3_SURGE_OF_POWER, true);
-                        }, 3s);
+                    {
+                        if (Unit* delayedTarget = ObjectAccessor::GetUnit(*me, targetGuid))
+                            me->CastSpell(delayedTarget, SPELL_PH3_SURGE_OF_POWER, true);
+                    }, 3s);
                 }
             }
             events.Repeat(7s);
@@ -896,14 +896,14 @@ struct npc_nexus_lord : public ScriptedAI
     {
         DoZoneInCombat();
         ScheduleTimedEvent(3s, 10s, [&]
-            {
-                if (Unit* victim = me->GetVictim())
-                    me->CastSpell(victim, SPELL_ARCANE_SHOCK);
-            }, 10s, 15s);
+        {
+            if (Unit* victim = me->GetVictim())
+                me->CastSpell(victim, SPELL_ARCANE_SHOCK);
+        }, 10s, 15s);
         ScheduleTimedEvent(8s, 14s, [&]
-            {
-                me->CastSpell(me, SPELL_HASTE);
-            }, 20s, 30s);
+        {
+            me->CastSpell(me, SPELL_HASTE);
+        }, 20s, 30s);
     }
 
     void AttackStart(Unit* victim) override
@@ -933,9 +933,9 @@ struct npc_nexus_lord : public ScriptedAI
             }
 
         scheduler.Update(diff, [this]
-            {
-                return me->HasUnitState(UNIT_STATE_CASTING);
-            });
+        {
+            return me->HasUnitState(UNIT_STATE_CASTING);
+        });
 
         DoMeleeAttackIfReady();
     }
@@ -954,25 +954,25 @@ struct npc_scion_of_eternity : public ScriptedAI
         me->SetReactState(REACT_PASSIVE);
         me->CastSpell(me, SPELL_TELEPORT_VISUAL, true);
         ScheduleTimedEvent(20s, 25s, [&]
+        {
+            GuidVector guids;
+            me->GetMap()->DoForAllPlayers([&](Player* player)
             {
-                GuidVector guids;
-                me->GetMap()->DoForAllPlayers([&](Player* player)
-                    {
-                        if (player->IsAlive() && !player->GetVehicle())
-                            guids.push_back(player->GetGUID());
-                    });
-                if (!guids.empty())
-                    if (Player* player = ObjectAccessor::GetPlayer(*me, guids.at(urand(0, guids.size() - 1))))
-                        me->CastSpell(player, SPELL_SCION_ARCANE_BARRAGE);
-            }, 5s, 8s);
+                if (player->IsAlive() && !player->GetVehicle())
+                    guids.push_back(player->GetGUID());
+            });
+            if (!guids.empty())
+                if (Player* player = ObjectAccessor::GetPlayer(*me, guids.at(urand(0, guids.size() - 1))))
+                    me->CastSpell(player, SPELL_SCION_ARCANE_BARRAGE);
+        }, 5s, 8s);
     }
 
     void UpdateAI(uint32 diff) override
     {
         scheduler.Update(diff, [this]
-            {
-                return me->HasUnitState(UNIT_STATE_CASTING);
-            });
+        {
+            return me->HasUnitState(UNIT_STATE_CASTING);
+        });
     }
 
     void JustDied(Unit* killer) override
@@ -1058,8 +1058,7 @@ struct npc_hover_disk : public VehicleAI
                         if (Player* player = creature->SelectNearestPlayer(100.0f))
                             creature->AI()->AttackStart(player);
                     }
-        }
-        else if (id == MI_POINT_SCION)
+        } else if (id == MI_POINT_SCION)
             events.RescheduleEvent(EVENT_DISK_MOVE_NEXT_POINT, 0ms);
     }
 
@@ -1116,28 +1115,28 @@ struct npc_alexstrasza : public ScriptedAI
         me->SetDisableGravity(true);
 
         ScheduleUniqueTimedEvent(9s, [&]
+        {
+            me->CastSpell(AlexstraszaGiftPos.GetPositionX(), AlexstraszaGiftPos.GetPositionY(), AlexstraszaGiftPos.GetPositionZ(), SPELL_ALEXSTRASZA_GIFT, true);
+            if (GameObject* chest = me->SummonGameObject(ALEXSTRASZA_GIFT, AlexstraszaGiftPos.GetPositionX(), AlexstraszaGiftPos.GetPositionY(), AlexstraszaGiftPos.GetPositionZ(), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0))
+                chest->SetLootRecipient(me->GetMap());
+
+            if (GameObject* heart = me->SummonGameObject(HEART_OF_MAGIC, HeartOfMagicPos.GetPositionX(), HeartOfMagicPos.GetPositionY(), HeartOfMagicPos.GetPositionZ(), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0))
+                heart->SetLootRecipient(me->GetMap());
+
+            Talk(SAY_ALEXSTRASZA_ONE);
+            ScheduleUniqueTimedEvent(6s, [&]
             {
-                me->CastSpell(AlexstraszaGiftPos.GetPositionX(), AlexstraszaGiftPos.GetPositionY(), AlexstraszaGiftPos.GetPositionZ(), SPELL_ALEXSTRASZA_GIFT, true);
-                if (GameObject* chest = me->SummonGameObject(ALEXSTRASZA_GIFT, AlexstraszaGiftPos.GetPositionX(), AlexstraszaGiftPos.GetPositionY(), AlexstraszaGiftPos.GetPositionZ(), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0))
-                    chest->SetLootRecipient(me->GetMap());
-
-                if (GameObject* heart = me->SummonGameObject(HEART_OF_MAGIC, HeartOfMagicPos.GetPositionX(), HeartOfMagicPos.GetPositionY(), HeartOfMagicPos.GetPositionZ(), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0))
-                    heart->SetLootRecipient(me->GetMap());
-
-                Talk(SAY_ALEXSTRASZA_ONE);
-                ScheduleUniqueTimedEvent(6s, [&]
+                Talk(SAY_ALEXSTRASZA_TWO);
+                ScheduleUniqueTimedEvent(5s, [&]
+                {
+                    Talk(SAY_ALEXSTRASZA_THREE);
+                    ScheduleUniqueTimedEvent(22s, [&]
                     {
-                        Talk(SAY_ALEXSTRASZA_TWO);
-                        ScheduleUniqueTimedEvent(5s, [&]
-                            {
-                                Talk(SAY_ALEXSTRASZA_THREE);
-                                ScheduleUniqueTimedEvent(22s, [&]
-                                    {
-                                        Talk(SAY_ALEXSTRASZA_FOUR);
-                                    }, EVENT_ALEXSTRASZA_SAY_FOUR);
-                            }, EVENT_ALEXSTRASZA_SAY_THREE);
-                    }, EVENT_ALEXSTRASZA_SAY_TWO);
-            }, EVENT_ALEXSTRASZA_GIFT);
+                        Talk(SAY_ALEXSTRASZA_FOUR);
+                    }, EVENT_ALEXSTRASZA_SAY_FOUR);
+                }, EVENT_ALEXSTRASZA_SAY_THREE);
+            }, EVENT_ALEXSTRASZA_SAY_TWO);
+        }, EVENT_ALEXSTRASZA_GIFT);
     }
 
     void UpdateAI(uint32 diff) override
@@ -1151,7 +1150,7 @@ struct npc_alexstrasza : public ScriptedAI
 
 struct npc_eoe_wyrmrest_skytalon : public VehicleAI
 {
-    npc_eoe_wyrmrest_skytalon(Creature* creature) : VehicleAI(creature) {}
+    npc_eoe_wyrmrest_skytalon(Creature* creature) : VehicleAI(creature) { }
 
     void IsSummonedBy(WorldObject* summoner) override
     {
@@ -1162,7 +1161,7 @@ struct npc_eoe_wyrmrest_skytalon : public VehicleAI
         me->m_Events.AddEventAtOffset([summonerGUID, this] {
             if (Player* rider = ObjectAccessor::GetPlayer(*me, summonerGUID))
                 DoCast(rider, SPELL_RIDE_RED_DRAGON, true);
-            }, 2s);
+        }, 2s);
     }
 
     void PassengerBoarded(Unit* pass, int8  /*seat*/, bool apply) override
@@ -1233,18 +1232,15 @@ class spell_malygos_vortex_visual : public AuraScript
         if (!caster)
             return;
 
-        for (auto const* ref : caster->GetThreatMgr().GetUnsortedThreatList())
+        if (InstanceScript* instance = caster->GetInstanceScript())
         {
-            if (Player* player = ref->GetVictim()->ToPlayer())
+            if (Creature* trigger = ObjectAccessor::GetCreature(*caster, instance->GetGuidData(DATA_VORTEX_TRIGGER)))
             {
-                if (player->IsGameMaster())
-                    continue;
-
-                if (InstanceScript* instance = caster->GetInstanceScript())
+                caster->GetMap()->DoForAllPlayers([&](Player* player)
                 {
-                    if (Creature* trigger = ObjectAccessor::GetCreature(*caster, instance->GetGuidData(DATA_VORTEX_TRIGGER)))
+                    if (player->IsAlive() && !player->IsGameMaster())
                         trigger->CastSpell(player, SPELL_VORTEX_TELEPORT, true);
-                }
+                });
             }
         }
 
@@ -1303,10 +1299,10 @@ class spell_malygos_surge_of_power_warning_selector_25 : public SpellScript
 
         // Keep only creatures with vehicle kits (drakes)
         targets.remove_if([](WorldObject* target)
-            {
-                Creature* creature = target->ToCreature();
-                return !creature || !creature->GetVehicleKit();
-            });
+        {
+            Creature* creature = target->ToCreature();
+            return !creature || !creature->GetVehicleKit();
+        });
 
         if (targets.empty())
             return;

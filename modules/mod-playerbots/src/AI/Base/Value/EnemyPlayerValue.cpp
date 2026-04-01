@@ -5,6 +5,7 @@
 
 #include "EnemyPlayerValue.h"
 
+#include "CombatManager.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
 #include "Vehicle.h"
@@ -52,46 +53,33 @@ Unit* EnemyPlayerValue::Calculate()
             controllingVehicle = true;
     }
 
-    // 1. Check units we are currently in combat with.
+    // 1. Check units we are currently in PvP combat with.
     std::vector<Unit*> targets;
     Unit* pVictim = bot->GetVictim();
-    HostileReference* pReference = bot->getHostileRefMgr().getFirst();
-    while (pReference)
+    for (auto const& [guid, combatRef] : bot->GetCombatManager().GetPvPCombatRefs())
     {
-        ThreatMgr* threatMgr = pReference->GetSource();
-        if (Unit* pTarget = threatMgr->GetOwner())
-        {
-            if (pTarget != pVictim && pTarget->IsPlayer() &&
-                (pTarget->CanSeeOrDetect(bot) || bot->InBattleground() || bot->InArena()) && //隐身不被攻击
-                !pTarget->m_stealth.GetFlags() && bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL)) 
-            {
-                if (bot->GetTeamId() == TEAM_HORDE)
-                {
-                    if (pTarget->HasAura(23333))
-                        return pTarget;
-                }
-                else
-                {
-                    if (pTarget->HasAura(23335))
-                        return pTarget;
-                }
-                if ((bot->InArena() || bot->InBattleground()) && //在没有敌对治疗的前提下
-                    !botAI->GetAiObjectContext()->GetValue<Unit*>("enemy healer target")->Get())
-                {
-                    if (pTarget->getClass() == CLASS_HUNTER)
-                        return pTarget;  // 优先攻击目标
-                    if (pTarget->getClass() == CLASS_MAGE)
-                        return pTarget;
-                    if (pTarget->getClass() == CLASS_WARLOCK)
-                        return pTarget;
-                    if (pTarget->getClass() == CLASS_ROGUE)
-                        return pTarget;
-                }
-                targets.push_back(pTarget);
-            }
-        }
+        Unit* pTarget = combatRef->GetOther(bot);
+        if (!pTarget || pTarget == pVictim || !pTarget->IsPlayer() || !pTarget->CanSeeOrDetect(bot) ||
+            !bot->IsWithinDist(pTarget, VISIBILITY_DISTANCE_NORMAL))
+            continue;
 
-        pReference = pReference->next();
+        if ((bot->GetTeamId() == TEAM_HORDE && pTarget->HasAura(23333)) ||
+            (bot->GetTeamId() == TEAM_ALLIANCE && pTarget->HasAura(23335)))
+            return pTarget;
+
+        if ((bot->InArena() || bot->InBattleground()) && //在没有敌对治疗的前提下
+            !botAI->GetAiObjectContext()->GetValue<Unit*>("enemy healer target")->Get())
+        {
+            if (pTarget->getClass() == CLASS_HUNTER)
+                return pTarget;  // 优先攻击目标
+            if (pTarget->getClass() == CLASS_MAGE)
+                return pTarget;
+            if (pTarget->getClass() == CLASS_WARLOCK)
+                return pTarget;
+            if (pTarget->getClass() == CLASS_ROGUE)
+                return pTarget;
+        }
+        targets.push_back(pTarget);
     }
 
     if (!targets.empty())

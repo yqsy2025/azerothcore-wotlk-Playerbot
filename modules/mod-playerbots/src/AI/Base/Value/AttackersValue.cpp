@@ -144,21 +144,15 @@ void AttackersValue::AddAttackersOf(Player* player, std::unordered_set<Unit*>& t
     if (!player || !player->IsInWorld() || player->IsBeingTeleported())
         return;
 
-    HostileRefMgr& refManager = player->getHostileRefMgr();
-    HostileReference* ref = refManager.getFirst();
-    if (!ref)
-        return;
-
-    while (ref)
+    for (auto const& [guid, ref] : player->GetThreatMgr().GetThreatenedByMeList())
     {
-        ThreatMgr* threatMgr = ref->GetSource();
-        Unit* attacker = threatMgr->GetOwner();
+        Unit* attacker = ref->GetOwner();
+        if (!attacker)
+            continue;
 
         if (player->IsValidAttackTarget(attacker) &&
             player->GetDistance2d(attacker) < sPlayerbotAIConfig.sightDistance)
             targets.insert(attacker);
-
-        ref = ref->next();
     }
 }
 
@@ -183,7 +177,6 @@ bool AttackersValue::hasRealThreat(Unit* attacker)
     return attacker && attacker->IsInWorld() && attacker->IsAlive() && !attacker->IsPolymorphed() &&
            // !attacker->isInRoots() &&
            !attacker->IsFriendlyTo(bot);
-    (attacker->GetThreatMgr().getCurrentVictim() || dynamic_cast<Player*>(attacker));
 }
 
 bool AttackersValue::IsPossibleTarget(Unit* attacker, Player* bot, float /*range*/)
@@ -294,9 +287,6 @@ bool AttackersValue::IsValidTarget(Unit* attacker, Player* bot)
 {
     //竞技场禁用视野检查
     return IsPossibleTarget(attacker, bot) && (bot->InArena() || bot->IsWithinLOSInMap(attacker));
-    // (attacker->GetThreatMgr().getCurrentVictim() || attacker->GetGuidValue(UNIT_FIELD_TARGET) ||
-    // attacker->GetGUID().IsPlayer() || attacker->GetGUID() ==
-    // GET_PLAYERBOT_AI(bot)->GetAiObjectContext()->GetValue<ObjectGuid>("pull target")->Get());
 }
 
 bool PossibleAddsValue::Calculate()
@@ -309,26 +299,25 @@ bool PossibleAddsValue::Calculate()
         if (find(attackers.begin(), attackers.end(), guid) != attackers.end())
             continue;
 
-        if (Unit* add = botAI->GetUnit(guid))
+        Unit* add = botAI->GetUnit(guid);
+        if (!add || !add->IsInWorld() || add->IsDuringRemoveFromWorld())
+            continue;
+
+        if (!add->GetTarget() && !add->GetThreatMgr().GetLastVictim() && add->IsHostileTo(bot))
         {
-            if (!add->IsInWorld() || add->IsDuringRemoveFromWorld())
-                continue;
+            for (ObjectGuid const attackerGUID : attackers)
 
-            if (!add->GetTarget() && !add->GetThreatMgr().getCurrentVictim() && add->IsHostileTo(bot))
             {
-                for (ObjectGuid const attackerGUID : attackers)
-                {
-                    Unit* attacker = botAI->GetUnit(attackerGUID);
-                    if (!attacker)
-                        continue;
+                Unit* attacker = botAI->GetUnit(attackerGUID);
+                if (!attacker)
+                    continue;
 
-                    float dist = ServerFacade::instance().GetDistance2d(attacker, add);
-                    if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aoeRadius * 1.5f))
-                        continue;
+                float dist = ServerFacade::instance().GetDistance2d(attacker, add);
+                if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aoeRadius * 1.5f))
+                    continue;
 
-                    if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aggroDistance))
-                        return true;
-                }
+                if (ServerFacade::instance().IsDistanceLessOrEqualThan(dist, sPlayerbotAIConfig.aggroDistance))
+                    return true;
             }
         }
     }

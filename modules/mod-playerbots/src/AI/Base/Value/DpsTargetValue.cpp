@@ -13,16 +13,12 @@ class FindMaxThreatGapTargetStrategy : public FindTargetStrategy
 public:
     FindMaxThreatGapTargetStrategy(PlayerbotAI* botAI) : FindTargetStrategy(botAI), minThreat(0) {}
 
-    void CheckAttacker(Unit* attacker, ThreatMgr* threatMgr) override
+    void CheckAttacker(Unit* attacker, ThreatManager* threatMgr) override
     {
         if (!attacker->IsAlive())
-        {
             return;
-        }
         if (foundHighPriority)
-        {
             return;
-        }
         if (IsHighPriority(attacker))
         {
             result = attacker;
@@ -32,7 +28,7 @@ public:
         if (!result || CalcThreatGap(attacker, threatMgr) > CalcThreatGap(result, &result->GetThreatMgr()))
             result = attacker;
     }
-    float CalcThreatGap(Unit* attacker, ThreatMgr* threatMgr)
+    float CalcThreatGap(Unit* attacker, ThreatManager* threatMgr)
     {
         Unit* victim = attacker->GetVictim();
         return threatMgr->GetThreat(victim) - threatMgr->GetThreat(attacker);
@@ -52,7 +48,7 @@ public:
         result = nullptr;
     }
 
-    void CheckAttacker(Unit* attacker, ThreatMgr* threatMgr) override
+    void CheckAttacker(Unit* attacker, ThreatManager* threatMgr) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
@@ -61,13 +57,9 @@ public:
                 return;
         }
         if (!attacker->IsAlive())
-        {
             return;
-        }
         if (foundHighPriority)
-        {
             return;
-        }
         if (IsHighPriority(attacker))
         {
             result = attacker;
@@ -90,24 +82,16 @@ public:
         int new_level = GetIntervalLevel(new_unit);
         int old_level = GetIntervalLevel(old_unit);
         if (new_level != old_level)
-        {
             return new_level > old_level;
-        }
         int32_t level = new_level;
         if (level % 10 == 2 || level % 10 == 0)
-        {
             return new_time < old_time;
-        }
         // dont switch targets when all of them with low health
         Unit* currentTarget = botAI->GetAiObjectContext()->GetValue<Unit*>("current target")->Get();
         if (currentTarget == new_unit)
-        {
             return true;
-        }
         if (currentTarget == old_unit)
-        {
             return false;
-        }
         return new_time > old_time;
     }
     int32_t GetIntervalLevel(Unit* unit)
@@ -119,13 +103,9 @@ public:
         attackRange += 5.0f;
         int level = dis < attackRange ? 10 : 0;
         if (time >= 5 && time <= 30)
-        {
             return level + 2;
-        }
         if (time > 30)
-        {
             return level;
-        }
         return level + 1;
     }
 
@@ -143,7 +123,7 @@ public:
     {
     }
 
-    void CheckAttacker(Unit* attacker, ThreatMgr*) override
+    void CheckAttacker(Unit* attacker, ThreatManager*) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
@@ -216,7 +196,7 @@ public:
     {
     }
 
-    void CheckAttacker(Unit* attacker, ThreatMgr*) override
+    void CheckAttacker(Unit* attacker, ThreatManager*) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
@@ -319,7 +299,7 @@ class FindMaxHpTargetStrategy : public FindTargetStrategy
 public:
     FindMaxHpTargetStrategy(PlayerbotAI* botAI) : FindTargetStrategy(botAI), maxHealth(0) {}
 
-    void CheckAttacker(Unit* attacker, ThreatMgr*) override
+    void CheckAttacker(Unit* attacker, ThreatManager*) override
     {
         if (Group* group = botAI->GetBot()->GetGroup())
         {
