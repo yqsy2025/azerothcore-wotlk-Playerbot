@@ -245,7 +245,7 @@ bool WorldPosition::NormalizePositionForTeleport(Player* bot)
     float safeZ = std::max(groundZ, waterZ);
     if (safeZ <= INVALID_HEIGHT || safeZ == VMAP_INVALID_HEIGHT_VALUE)
     {
-        LOG_ERROR("playerbots", "[MISSED Teleport by Travel Manager] Normalized destination ({},{},{},{})", x, y, safeZ,
+        LOG_DEBUG("playerbots", "[MISSED Teleport by Travel Manager] Normalized destination ({},{},{},{})", x, y, safeZ,
                   GetMapId());
         return false;
     }
