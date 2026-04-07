@@ -384,7 +384,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
     Group* group = bot->GetGroup();
 
     bool IsRandomBot = sRandomPlayerbotMgr.IsRandomBot(bot);
-    if (group && !bot->InBattleground() && !group->isLFGGroup())
+/*    if (group && !bot->InBattleground() && !group->isLFGGroup())
     {
         uint32 botCount = 0;
         uint32 realPlayerCount = 0;
@@ -415,7 +415,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
                 botAI->TellMaster("机器人数量超出限制!");
             LeaveOrDisbandGroup();
         }
-    }
+    }*/
     // If bot is not in group verify that for is RandomBot before clearing  master and resetting.
     if (!group)
     {

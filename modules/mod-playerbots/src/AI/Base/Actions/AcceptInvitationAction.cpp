@@ -38,7 +38,7 @@ static std::array<InviteShard, SHARD_COUNT> sInviteShards;
 static size_t GetShardIndex(const std::string& ip) { return std::hash<std::string>()(ip) % SHARD_COUNT; }
 
 // 获取IP
-static std::string GetPlayerIP(Player* player)
+std::string AcceptInvitationAction::GetPlayerIP(Player* player)
 {
     if (!player || !player->GetSession())
         return "";
@@ -47,7 +47,7 @@ static std::string GetPlayerIP(Player* player)
 }
 
 // 清理无效bot（锁优化版）
-static void CleanupInviteMapForIP(Player* inviter)
+void AcceptInvitationAction::CleanupInviteMapForIP(Player* inviter)
 {
     if (!inviter)
         return;
