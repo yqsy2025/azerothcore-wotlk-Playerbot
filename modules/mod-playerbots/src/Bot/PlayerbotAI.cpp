@@ -433,7 +433,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
     if (bot->InBattleground() && IsRandomBot && master)
         SetMaster(nullptr);
     // 第三部分：寻找新主人
-    if (group && !bot->InBattleground() && !group->isRaidGroup())
+    if (group && !bot->InBattleground())
     {
         if (GetMaster() && HasRealPlayerMaster() &&
             (bot->IsInSameGroupWith(GetMaster()) || bot->IsInSameRaidWith(GetMaster())))

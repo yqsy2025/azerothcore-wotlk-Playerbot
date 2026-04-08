@@ -72,7 +72,6 @@ void AcceptInvitationAction::CleanupInviteMapForIP(Player* inviter)
         bots.assign(it->second.begin(), it->second.end());
     }
 
-    Group* group = inviter->GetGroup();
     std::vector<ObjectGuid> toRemove;
 
     // 锁外处理（避免卡顿）
@@ -80,7 +79,7 @@ void AcceptInvitationAction::CleanupInviteMapForIP(Player* inviter)
     {
         Player* bot = ObjectAccessor::FindPlayer(guid);
 
-        if (!bot || !group || !group->IsMember(guid))
+        if (!bot || !bot->GetGroup())
             toRemove.push_back(guid);
     }
 
@@ -138,7 +137,7 @@ bool AcceptInvitationAction::Execute(Event event)
 
             bot->UninviteFromGroup();
 
-            botAI->TellMaster("当前IP下机器人已达上限（最多4个）");
+            inviter->SendSystemMessage("当前IP下机器人已达上限（最多4个）");
 
             return false;
         }
