@@ -453,8 +453,15 @@ void PlayerbotAI::UpdateAIGroupMaster()
             return;
         }
 
-        if (GetMaster() && HasRealPlayerMaster() &&
-            !GetMaster()->IsInWorld() && !GetMaster()->IsBeingTeleported())
+        if (GetMaster() && HasRealPlayerMaster() && (!bot->IsInSameGroupWith(GetMaster()) || !GetMaster()->GetSession()))
+        {
+            LeaveOrDisbandGroup();
+            SetMaster(nullptr);
+            Reset(true);
+            ResetStrategies();
+            return;
+        }
+        if (group->GetLeader() && GET_PLAYERBOT_AI(group->GetLeader()) && !group->isLFGGroup())
         {
             LeaveOrDisbandGroup();
             SetMaster(nullptr);
