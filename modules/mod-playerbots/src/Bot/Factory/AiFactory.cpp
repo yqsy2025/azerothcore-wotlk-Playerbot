@@ -309,7 +309,7 @@ void AiFactory::AddDefaultCombatStrategies(Player* player, PlayerbotAI* const fa
                     engine->addStrategiesNoInit("fire", nullptr);
             }
             else
-                engine->addStrategiesNoInit("frost", nullptr);
+                engine->addStrategiesNoInit("dps", "dps assist", "cure", "cc", "aoe", nullptr);
 
             engine->addStrategiesNoInit("dps", "dps assist", "cure", "aoe", nullptr);
             break;
