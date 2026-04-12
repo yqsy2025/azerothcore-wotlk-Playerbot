@@ -152,6 +152,33 @@ bool PetsAction::Execute(Event event)
             botAI->TellError(text);
             return false;
         }
+        // ========================
+        // 智能近战/远程判断
+        // ========================
+        // 获取目标周围的怪物列表
+        std::list<Creature*> nearbyCreatures;
+        targetUnit->GetCreatureListWithEntryInGrid(nearbyCreatures, 0, 8.0f);  // entry 0 = 全部怪物，8码范围
+
+        int enemyCount = 0;
+        for (Creature* creature : nearbyCreatures)
+        {
+            if (!creature || creature->isDead() || !creature->IsFriendlyTo(targetUnit))
+                continue;
+
+            ++enemyCount;
+            if (enemyCount > 2)
+                break;  // 超过阈值直接停止
+        }
+        if (enemyCount > 2)
+        {
+            if (!bot->InArena() && !bot->InBattleground() && bot->GetGroup())
+            {
+                if (bot->GetDistance(targetUnit) > 8)
+                {
+                    return false;
+                }
+            }
+        }
         if (sPlayerbotAIConfig.IsPvpProhibited(bot->GetZoneId(), bot->GetAreaId()) &&
             (targetUnit->IsPlayer() || targetUnit->IsPet()) &&
             (!bot->duel || bot->duel->Opponent != targetUnit))

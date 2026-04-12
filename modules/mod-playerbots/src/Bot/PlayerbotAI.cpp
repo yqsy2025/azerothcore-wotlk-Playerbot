@@ -435,6 +435,22 @@ void PlayerbotAI::UpdateAIGroupMaster()
     // 第三部分：寻找新主人
     if (group && !bot->InBattleground())
     {
+        if (GetMaster() && HasRealPlayerMaster() && (!GetMaster()->GetSession() || !group->IsMember(GetMaster()->GetGUID())))
+        {
+            LeaveOrDisbandGroup();
+            SetMaster(nullptr);
+            Reset(true);
+            ResetStrategies();
+            return;
+        }
+        if (group->GetLeader() && GET_PLAYERBOT_AI(group->GetLeader()) && !group->isLFGGroup())
+        {
+            LeaveOrDisbandGroup();
+            SetMaster(nullptr);
+            Reset(true);
+            ResetStrategies();
+            return;
+        }
         if (GetMaster() && HasRealPlayerMaster() &&
             (bot->IsInSameGroupWith(GetMaster()) || bot->IsInSameRaidWith(GetMaster())))
         {
@@ -450,23 +466,6 @@ void PlayerbotAI::UpdateAIGroupMaster()
                                 GetMaster()->GetPositionZ(), 0);
                 botAI->SayToParty("我进本了");
             }
-            return;
-        }
-
-        if (GetMaster() && HasRealPlayerMaster() && (!bot->IsInSameGroupWith(GetMaster()) || !GetMaster()->GetSession()))
-        {
-            LeaveOrDisbandGroup();
-            SetMaster(nullptr);
-            Reset(true);
-            ResetStrategies();
-            return;
-        }
-        if (group->GetLeader() && GET_PLAYERBOT_AI(group->GetLeader()) && !group->isLFGGroup())
-        {
-            LeaveOrDisbandGroup();
-            SetMaster(nullptr);
-            Reset(true);
-            ResetStrategies();
             return;
         }
     }
@@ -500,7 +499,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
             }
         }
     }
-    if (group->isRaidGroup())
+    if (group->isRaidGroup() && !GetMaster())
     {
         Player* newMaster = FindNewMaster();
         if (newMaster && newMaster != master)

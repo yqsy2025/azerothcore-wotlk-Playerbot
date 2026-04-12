@@ -14,6 +14,7 @@
 #include "ServerFacade.h"
 #include "SharedDefines.h"
 #include "Unit.h"
+#include "Object.h"
 
 bool AttackAction::Execute(Event /*event*/)
 {
@@ -58,12 +59,42 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     bool sameTarget = oldTarget == target && bot->GetVictim() == target;
     bool inCombat = botAI->GetState() == BOT_STATE_COMBAT;
     bool sameAttackMode = bot->HasUnitState(UNIT_STATE_MELEE_ATTACKING) == shouldMelee;
-/*    if (!bot->InArena() && !bot->InBattleground() && bot->GetGroup()
-        && !sameTarget && !inCombat)
+    // ========================
+    // 智能近战/远程判断
+    // ========================
+    // 获取目标周围的怪物列表
+    std::list<Creature*> nearbyCreatures;
+    target->GetCreatureListWithEntryInGrid(nearbyCreatures, 0, 8.0f);  // entry 0 = 全部怪物，8码范围
+
+    int enemyCount = 0;
+    for (Creature* creature : nearbyCreatures)
     {
-        if (bot->GetDistance(target) > 10)
-            return false;
-    }*/
+        if (!creature || creature->isDead() || !creature->IsFriendlyTo(target))
+            continue;
+
+        ++enemyCount;
+        if (enemyCount > 2)
+            break;  // 超过阈值直接停止
+    }
+    time_t now = time(nullptr);
+    // 敌人多 → 远程攻击
+    if (enemyCount > 2)
+    {
+        if (!bot->InArena() && !bot->InBattleground() && bot->GetGroup() && !sameTarget && !inCombat &&
+            botAI->IsMelee(bot))
+        {
+            if (bot->GetDistance(target) > 10)
+            {
+                if (now - lastSayTime > 5)
+                {
+                    botAI->SayToParty("对面怪多容易ADD我先等一下");
+                    lastSayTime = now;
+                }
+                return false;
+            }     
+        }
+    }
+
     if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FLIGHT_MOTION_TYPE ||
         bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
     {
