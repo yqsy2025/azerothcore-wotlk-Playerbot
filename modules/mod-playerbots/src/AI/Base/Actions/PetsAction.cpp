@@ -138,6 +138,8 @@ bool PetsAction::Execute(Event event)
             botAI->TellError(text);
             return false;
         }
+        if (!targetUnit->IsInWorld())
+            return false;
         if (!targetUnit->IsAlive())
         {
             std::string text = PlayerbotTextMgr::instance().GetBotTextOrDefault(
