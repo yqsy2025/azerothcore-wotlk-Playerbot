@@ -103,7 +103,7 @@ void MapUpdater::activate(std::size_t num_threads)
     }
 }
 
-void MapUpdater::deactivate()
+/*void MapUpdater::deactivate()
 {
     _cancelationToken = true;
 
@@ -119,9 +119,41 @@ void MapUpdater::deactivate()
             thread.join();
         }
     }
+}*/
+void MapUpdater::deactivate()
+{
+    _cancelationToken.store(true, std::memory_order_release);
+
+    _queue.Cancel();
+
+    {
+        std::lock_guard<std::mutex> lock(_lock);
+        _condition.notify_all();
+    }
+
+    wait();
+
+    for (auto& thread : _workerThreads)
+    {
+        if (thread.joinable())
+        {
+            thread.join();
+        }
+    }
+
+    _workerThreads.clear();
 }
 
 void MapUpdater::wait()
+{
+    std::unique_lock<std::mutex> guard(_lock);
+
+    while (pending_requests.load(std::memory_order_acquire) != 0)
+    {
+        _condition.wait(guard);
+    }
+}
+/*void MapUpdater::wait()
 {
     std::unique_lock<std::mutex> guard(_lock);  // Guard lock for safe waiting
 
@@ -129,7 +161,7 @@ void MapUpdater::wait()
     _condition.wait(guard, [this] {
         return pending_requests.load(std::memory_order_acquire) == 0;
     });
-}
+}*/
 
 void MapUpdater::schedule_task(UpdateRequest* request)
 {
