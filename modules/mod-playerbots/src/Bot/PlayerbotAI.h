@@ -389,10 +389,6 @@ public:
     void UpdateAI(uint32 elapsed, bool minimal = false) override;
     void UpdateAIInternal(uint32 elapsed, bool minimal = false) override;
 
-    // Schedule a delayed PvE re-equip after leaving BG/arena (teleport/loading safe).
-    // Used by PvP gear swap logic to avoid re-gearing during map transfer.
-    void SetPendingPveGearReequip(bool hadRealMaster);
-
     std::string const HandleRemoteCommand(std::string const command);
     void HandleCommand(uint32 type, std::string const text, Player* fromPlayer);
     void QueueChatResponse(const ChatQueuedReply reply);
@@ -434,6 +430,7 @@ public:
     static bool IsAssistHealOfIndex(Player* player, uint8 index, bool ignoreDeadPlayers = false);
     static bool IsAssistRangedDpsOfIndex(Player* player, uint8 index, bool ignoreDeadPlayers = false);
     bool HasAggro(Unit* unit);
+    bool IsMovementImpaired(Unit* unit);
     static int32 GetAssistTankIndex(Player* player);
     int32 GetGroupSlotIndex(Player* player);
     int32 GetRangedIndex(Player* player);
@@ -544,13 +541,11 @@ public:
     // Checks if the bot is summoned as alt of a player
     bool IsAlt();
     Player* GetGroupLeader();
-    // Returns a semi-random (cycling) number that is fixed for each bot.
     uint32 GetFixedBotNumber(uint32 maxNum = 100);
     GrouperType GetGrouperType();
     GuilderType GetGuilderType();
     bool HasPlayerNearby(WorldPosition* pos, float range = sPlayerbotAIConfig.reactDistance);
     bool HasPlayerNearby(float range = sPlayerbotAIConfig.reactDistance);
-    bool HasManyPlayersNearby(uint32 trigerrValue = 20, float range = sPlayerbotAIConfig.sightDistance);
     bool AllowActive(ActivityType activityType);
     bool AllowActivity(ActivityType activityType = ALL_ACTIVITY, bool checkNow = false);
     uint32 AutoScaleActivity(uint32 mod);
@@ -560,7 +555,7 @@ public:
     bool IsSafe(WorldObject* obj);
     ChatChannelSource GetChatChannelSource(Player* bot, uint32 type, std::string channelName);
 
-    bool CheckLocationDistanceByLevel(Player* player, const WorldLocation &loc, bool fromStartUp = false);
+    bool StarterLevelDistanceCheck(Player* player, const WorldLocation &loc, bool fromStartUp = false);
 
     bool HasCheat(BotCheatMask mask)
     {
@@ -618,12 +613,6 @@ private:
     Item* FindItemInInventory(std::function<bool(ItemTemplate const*)> checkItem) const;
     void HandleCommands();
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
-    bool _isBotInitializing = false;
-
-    // Pending PvE re-equip after leaving BG/arena (deferred until bot is back in world).
-    bool pendingPveGearReequip_ = false;
-    bool pendingPveGearReequipHadRealMaster_ = false;
-
     inline bool IsValidUnit(const Unit* unit) const
     {
         return unit && unit->IsInWorld() && !unit->IsDuringRemoveFromWorld();

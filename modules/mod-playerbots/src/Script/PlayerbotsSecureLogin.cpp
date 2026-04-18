@@ -57,12 +57,9 @@ public:
         if (packet.GetOpcode() != CMSG_PLAYER_LOGIN)
             return true;
 
-        // 由于 packet 是 const，我们需要创建一个副本或者使用不同的方法读取
-        WorldPacket packetCopy = packet;  // 创建副本以便修改读取位置
-        auto const oldPos = packetCopy.rpos();
+        WorldPacket pkt(packet);
         ObjectGuid loginGuid;
-        packetCopy >> loginGuid;
-        packetCopy.rpos(oldPos);  // 恢复副本的读取位置（虽然这个副本之后就不用了）
+        pkt >> loginGuid;
 
         if (!loginGuid)
             return true;

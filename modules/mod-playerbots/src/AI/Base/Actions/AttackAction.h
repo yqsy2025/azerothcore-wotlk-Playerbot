@@ -19,6 +19,7 @@ public:
 
 protected:
     bool Attack(Unit* target, bool with_pet = true);
+    time_t lastSayTime = 0;
 };
 
 class AttackMyTargetAction : public AttackAction

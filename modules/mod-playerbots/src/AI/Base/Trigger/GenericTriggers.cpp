@@ -464,6 +464,30 @@ bool AttackerCountTrigger::IsActive() { return AI_VALUE(uint8, "attacker count")
 
 bool HasAuraTrigger::IsActive() { return botAI->HasAura(getName(), GetTarget(), false, false, -1, true); }
 
+bool LossOfControlTrigger::IsActive()
+{
+    return bot->HasAuraType(SPELL_AURA_MOD_STUN) ||
+           bot->HasAuraType(SPELL_AURA_MOD_FEAR) ||
+           bot->HasAuraType(SPELL_AURA_MOD_ROOT) ||
+           bot->HasAuraType(SPELL_AURA_MOD_CONFUSE) ||
+           bot->HasAuraType(SPELL_AURA_MOD_CHARM);
+}
+
+bool FearCharmSleepTrigger::IsActive()
+{
+    return bot->HasAuraType(SPELL_AURA_MOD_FEAR) ||
+           bot->HasAuraType(SPELL_AURA_MOD_CHARM) ||
+           bot->HasAuraType(SPELL_AURA_AOE_CHARM) ||
+           bot->HasAuraWithMechanic(1 << MECHANIC_SLEEP);
+}
+
+bool FearSleepSapTrigger::IsActive()
+{
+    return bot->HasAuraType(SPELL_AURA_MOD_FEAR) ||
+           bot->HasAuraWithMechanic(1 << MECHANIC_SLEEP) ||
+           bot->HasAuraWithMechanic(1 << MECHANIC_SAPPED);
+}
+
 bool HasAuraStackTrigger::IsActive()
 {
     Aura* aura = botAI->GetAura(getName(), GetTarget(), false, true, stack);

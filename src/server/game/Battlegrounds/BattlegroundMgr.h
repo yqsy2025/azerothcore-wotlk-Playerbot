@@ -151,7 +151,6 @@ private:
     BattlegroundQueue m_BattlegroundQueues[MAX_BATTLEGROUND_QUEUE_TYPES];
 
     std::vector<uint64> m_QueueUpdateScheduler;
-    std::mutex m_queueSchedulerLock;  // 新增互斥量
     bool   m_ArenaTesting;
     bool   m_Testing;
     Seconds m_NextAutoDistributionTime;

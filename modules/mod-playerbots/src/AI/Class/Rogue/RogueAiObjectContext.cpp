@@ -194,7 +194,8 @@ SharedNamedObjectContextList<Trigger> RogueAiObjectContext::sharedTriggerContext
 SharedNamedObjectContextList<UntypedValue> RogueAiObjectContext::sharedValueContexts;
 
 RogueAiObjectContext::RogueAiObjectContext(PlayerbotAI* botAI)
-    : AiObjectContext(botAI, sharedStrategyContexts, sharedActionContexts, sharedTriggerContexts, sharedValueContexts)
+    : AiObjectContext(botAI, sharedStrategyContexts, sharedActionContexts,
+                      sharedTriggerContexts, sharedValueContexts)
 {
 }
 

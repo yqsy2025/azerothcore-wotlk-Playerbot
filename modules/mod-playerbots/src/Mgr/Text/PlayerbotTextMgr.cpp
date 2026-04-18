@@ -201,25 +201,6 @@ void PlayerbotTextMgr::AddLocalePriority(uint32 locale)
     botTextLocalePriority[locale]++;
 }
 
-//uint32 PlayerbotTextMgr::GetLocalePriority()
-//{
-//    // if no real players online, reset top locale
-//    uint32 const activeSessions = sWorldSessionMgr->GetActiveSessionCount();
-//    if (!activeSessions)
-//    {
-//        ResetLocalePriority();
-//        return 0;
-//    }
-//
-//    uint32 topLocale = 0;
-//    for (uint8 i = 0; i < MAX_LOCALES; ++i)
-//    {
-//        if (botTextLocalePriority[i] > botTextLocalePriority[topLocale])
-//            topLocale = i;
-//    }
-//
-//    return topLocale;
-//}
 uint32 PlayerbotTextMgr::GetLocalePriority()
 {
     // 始终使用中文 (ID = 4)，不管有没有玩家在线

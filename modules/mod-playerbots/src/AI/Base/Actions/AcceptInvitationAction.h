@@ -17,6 +17,8 @@ public:
     AcceptInvitationAction(PlayerbotAI* botAI) : SummonAction(botAI, "accept invitation") {}
 
     bool Execute(Event event) override;
+    static std::string GetPlayerIP(Player* player);
+    static void CleanupInviteMapForIP(Player* inviter);
 };
 
 #endif

@@ -10,9 +10,6 @@
 
 bool DrinkAction::Execute(Event event)
 {
-    if (bot->IsInCombat())
-        return false;
-
     if (botAI->HasCheat(BotCheatMask::food))
     {
         // if (bot->IsNonMeleeSpellCast(true))
@@ -74,9 +71,6 @@ bool DrinkAction::isPossible()
 
 bool EatAction::Execute(Event event)
 {
-    if (bot->IsInCombat())
-        return false;
-
     if (botAI->HasCheat(BotCheatMask::food))
     {
         // if (bot->IsNonMeleeSpellCast(true))

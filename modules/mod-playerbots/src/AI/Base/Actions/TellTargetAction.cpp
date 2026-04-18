@@ -43,7 +43,6 @@ bool TellAttackersAction::Execute(Event /*event*/)
 
     botAI->TellMaster("--- Threat ---");
 
-
     auto const& threatenedByMe = bot->GetThreatMgr().GetThreatenedByMeList();
     if (threatenedByMe.empty())
         return true;

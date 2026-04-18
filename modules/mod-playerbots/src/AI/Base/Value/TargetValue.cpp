@@ -150,12 +150,14 @@ Unit* FindTargetValue::Calculate()
         Unit* unit = ref->GetOwner();
         if (!unit)
             continue;
+
         std::wstring wnamepart;
         Utf8toWStr(unit->GetName(), wnamepart);
         wstrToLower(wnamepart);
         if (!qualifier.empty() && qualifier.length() == wnamepart.length() && Utf8FitTo(qualifier, wnamepart))
             return unit;
     }
+
     return nullptr;
 }
 

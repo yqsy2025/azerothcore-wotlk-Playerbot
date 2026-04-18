@@ -101,6 +101,11 @@ bool MovementAction::MoveNear(WorldObject* target, float distance, MovementPrior
         float x = target->GetPositionX() + cos(angle) * distance;
         float y = target->GetPositionY() + sin(angle) * distance;
         float z = target->GetPositionZ();
+        // Clamp Z to the terrain under the offset point so we don't
+        // hand PointMovementGenerator a Z that matches the target's
+        // floor but not the sampled (x,y) — avoids straight-line
+        // fallbacks through geometry.
+        bot->UpdateAllowedPositionZ(x, y, z);
 
         if (!bot->IsWithinLOS(x, y, z))
             continue;
@@ -250,7 +255,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
             //     bot->CastStop();
             //     botAI->InterruptSpell();
             // }
-            DoMovePoint(bot, x, y, z, generatePath, backwards);
+            DoMovePoint(bot, x, y, modifiedZ, generatePath, backwards);
             float delay = 1000.0f * MoveDelay(distance, backwards);
             if (lessDelay)
             {
@@ -258,7 +263,8 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
             }
             delay = std::max(.0f, delay);
             delay = std::min((float)sPlayerbotAIConfig.maxWaitForMove, delay);
-            AI_VALUE(LastMovement&, "last movement").Set(mapId, x, y, z, bot->GetOrientation(), delay, priority);
+            AI_VALUE(LastMovement&, "last movement")
+                .Set(mapId, x, y, modifiedZ, bot->GetOrientation(), delay, priority);
             return true;
         }
     }
@@ -778,15 +784,17 @@ bool MovementAction::MoveTo(WorldObject* target, float distance, MovementPriorit
 
     float dx = cos(angle) * needToGo + bx;
     float dy = sin(angle) * needToGo + by;
-    float dz;  // = std::max(bz, tz); // calc accurate z position to avoid stuck
+    // Start from a seed Z between bot and target, then clamp to the
+    // terrain under (dx,dy). Linear interpolation alone ignores hills
+    // between the two units and fed PointMovementGenerator a Z that
+    // could be well above/below ground, triggering straight-line
+    // fallbacks through walls.
+    float dz;
     if (distanceToTarget > CONTACT_DISTANCE)
-    {
         dz = bz + (tz - bz) * (needToGo / distanceToTarget);
-    }
     else
-    {
         dz = tz;
-    }
+    bot->UpdateAllowedPositionZ(dx, dy, dz);
     return MoveTo(target->GetMapId(), dx, dy, dz, false, false, false, false, priority);
 }
 
@@ -1215,29 +1223,15 @@ bool MovementAction::Follow(Unit* target, float distance, float angle)
             }
             else
             {
-                if (pTarget && pTarget->HasUnitState(UNIT_STATE_IN_FLIGHT))
+                if (pTarget->HasUnitState(UNIT_STATE_IN_FLIGHT))  // Move to where the player is flying to.
                 {
-                    MotionMaster* motionMaster = pTarget->GetMotionMaster();
-                    if (!motionMaster)
-                        return false;  // 根据上下文返回适当值
-
-                    MovementGenerator* top = motionMaster->top();
-                    if (!top)
-                        return false;
-
-                    // 使用 dynamic_cast 进行安全的向下转换
-                    FlightPathMovementGenerator* flightGen = dynamic_cast<FlightPathMovementGenerator*>(top);
-                    if (!flightGen)  // 转换失败（top 不是 FlightPathMovementGenerator 类型）
-                        return false;
-
-                    TaxiPathNodeList const& tMap = flightGen->GetPath();
+                    TaxiPathNodeList const& tMap =
+                        static_cast<FlightPathMovementGenerator*>(pTarget->GetMotionMaster()->top())->GetPath();
                     if (!tMap.empty())
                     {
-                        auto tEnd = tMap.back();  // 假设列表元素为指针
-                        if (!tEnd)
-                            return false;  // 如果元素可能为空，需要检查
-
-                        return MoveTo(tEnd->mapid, tEnd->x, tEnd->y, tEnd->z);
+                        auto tEnd = tMap.back();
+                        if (tEnd)
+                            return MoveTo(tEnd->mapid, tEnd->x, tEnd->y, tEnd->z);
                     }
                 }
             }
