@@ -64,7 +64,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     // 智能近战/远程判断
     // ========================
     // 获取目标周围的怪物列表
-    std::list<Creature*> nearbyCreatures;
+/*    std::list<Creature*> nearbyCreatures;
     target->GetCreatureListWithEntryInGrid(nearbyCreatures, 0, 8.0f);  // entry 0 = 全部怪物，8码范围
 
     int enemyCount = 0;
@@ -94,7 +94,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
                 return false;
             }
         }
-    }
+    }*/
     if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FLIGHT_MOTION_TYPE ||
         bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
     {
