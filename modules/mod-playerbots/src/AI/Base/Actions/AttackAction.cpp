@@ -15,7 +15,6 @@
 #include "SharedDefines.h"
 #include "Unit.h"
 #include "WaitForAttackStrategy.h"
-#include "Object.h"
 
 bool AttackAction::Execute(Event /*event*/)
 {
@@ -63,9 +62,9 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     // ========================
     // 智能近战/远程判断
     // ========================
-    // 获取目标周围的怪物列表
-    std::list<Creature*> nearbyCreatures;
-    target->GetCreatureListWithEntryInGrid(nearbyCreatures, 0, 8.0f);  // entry 0 = 全部怪物，8码范围
+    // 获取目标周围的怪物列表//多线程会crash
+/*    std::list<Creature*> nearbyCreatures;
+    target->GetCreatureListInGrid(nearbyCreatures, 6.0f);  // entry 0 = 全部怪物，6码范围
 
     int enemyCount = 0;
     for (Creature* creature : nearbyCreatures)
@@ -94,7 +93,7 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
                 return false;
             }
         }
-    }
+    }*/
     if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FLIGHT_MOTION_TYPE ||
         bot->HasUnitState(UNIT_STATE_IN_FLIGHT))
     {
