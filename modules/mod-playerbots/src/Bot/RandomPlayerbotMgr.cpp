@@ -2085,8 +2085,9 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     bot->DurabilityRepairAll(false, 1.0f, false);
     bot->SetFullHealth();
     bot->SetPvP(true);
-    //改成紫装
-    PlayerbotFactory factory(bot, bot->GetLevel(), ITEM_QUALITY_RARE);
+    PlayerbotFactory factory(bot, bot->GetLevel(),
+                             botAI->IsTank(bot) ? ITEM_QUALITY_EPIC : 0  // 坦克用史诗，其他用默认
+    );
     factory.Refresh();
 
     if (bot->GetMaxPower(POWER_MANA) > 0)
@@ -2542,7 +2543,12 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
             _isBotLogging = false;
         }
     }
-
+    // Run guild recovery/assignment at login to handle empty guild tables after restart.
+    if (sPlayerbotAIConfig.randomBotGuildCount > 0)
+    {
+        PlayerbotFactory factory(bot, bot->GetLevel());
+        factory.InitGuild();
+    }
     if (sPlayerbotAIConfig.randomBotFixedLevel)
     {
         bot->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);

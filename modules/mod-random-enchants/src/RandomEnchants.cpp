@@ -6,6 +6,7 @@
 #include "Configuration/Config.h"
 #include "Chat.h"
 #include "Spell.h"
+#include "item.h"
 
 // Enum for item qualities
 enum ItemQuality {
@@ -87,76 +88,140 @@ public:
         }
     }
 
-    void RollPossibleEnchant(Player* player, Item* item) {
-        // Check global enable option
-        if (!sConfigMgr->GetOption<bool>("RandomEnchants.Enable", true)) {
+    void RollPossibleEnchant(Player* player, Item* item)
+    {
+        if (!sConfigMgr->GetOption<bool>("RandomEnchants.Enable", true))
             return;
+
+        if (!player || !item || !item->GetTemplate())
+            return;
+
+        ItemTemplate const* proto = item->GetTemplate();
+
+        uint32 Quality = proto->Quality;
+        uint32 Class = proto->Class;
+
+        // 只处理 武器 / 护甲
+        if (Quality > 5 || (Class != ITEM_CLASS_WEAPON && Class != ITEM_CLASS_ARMOR))
+            return;
+
+        // 根据品质决定最大附魔数量
+        int maxEnchants = 0;
+        switch (Quality)
+        {
+        case 5: // 橙色(传说)
+            maxEnchants = 5;
+            break;
+        case 4: // 紫色(史诗)
+            maxEnchants = 4;
+            break;
+        case 3: // 蓝色(精良)
+        case 2: // 绿色(优秀)
+        case 1: // 白色(普通)
+        case 0: // 灰色(粗糙)
+        default:
+            maxEnchants = 3;
+            break;
         }
 
-        uint32 Quality = item->GetTemplate()->Quality;
-        uint32 Class = item->GetTemplate()->Class;
+        // 扩展槽位数组到5个，只使用7-11槽位
+        int slotRand[5] = { -1, -1, -1, -1, -1 };
+        uint32 slotEnch[5] = { 7, 8, 9, 10, 11 };
 
-        if (
-            (Quality > 5 || Quality < 3) || /* || item->GetTemplate()->ItemLevel < 188 eliminates enchanting anything that isn't a recognized quality */
-            (Class != 2 && Class != 4) /* eliminates enchanting anything but weapons/armor */) {
-            return;
+        // 配置每条附魔的触发几率
+        float enchantChance[5];
+        enchantChance[0] = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance1", 70.0f);
+        enchantChance[1] = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance2", 65.0f);
+        enchantChance[2] = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance3", 60.0f);
+        enchantChance[3] = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance4", 55.0f);
+        enchantChance[4] = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance5", 50.0f);
+
+        // 循环生成附魔，最多生成maxEnchants条
+        int enchantCount = 0;
+        for (int i = 0; i < maxEnchants; i++)
+        {
+            // 第一条附魔不需要前置条件，后续的附魔需要前一条成功
+            if (i == 0)
+            {
+                if (rand_chance() < enchantChance[i])
+                {
+                    slotRand[i] = getRandEnchantment(item);
+                    if (slotRand[i] != -1)
+                        enchantCount++;
+                }
+                else
+                    break; // 第一条失败就直接退出
+            }
+            else
+            {
+                // 前一条附魔成功才尝试生成当前附魔
+                if (slotRand[i - 1] != -1 && rand_chance() < enchantChance[i])
+                {
+                    slotRand[i] = getRandEnchantment(item);
+                    if (slotRand[i] != -1)
+                        enchantCount++;
+                    else
+                        break; // 获取附魔失败就停止
+                }
+                else
+                    break; // 前一条不存在或几率未触发就停止
+            }
         }
 
-        // Randomize base stats
-        //ItemTemplate const* itemTemplate = item->GetTemplate();
-        //for (uint16 i = 0; i < MAX_ITEM_PROTO_STATS; ++i) {
-        //    if (itemTemplate->ItemStat[i].ItemStatValue > 0) {
-        //        const uint16 ITEM_FIELD_STAT = ITEM_END; // ITEM_END 是基础字段的结束位置
-        //        float randomFactor = frand(0.5f, 1.5f); // Random factor between 50% and 150%
-        //        int32 newStatValue = static_cast<int32>(itemTemplate->ItemStat[i].ItemStatValue * randomFactor);
-        //        //item->SetUInt32Value(i, newStatValue);
-        //        //item->ApplyModInt32Value(i, newStatValue, 1);
-        //        //player->HandleStatModifier(UnitMods(i), TOTAL_VALUE, randomFactor, 1);
-        //        //player->ApplyStatBuffMod(stat(i), randomFactor, 1);
-        //        item->SetInt32Value(ITEM_FIELD_STAT + i, newStatValue);
-        //    }
-        //}
-        //item->SetState(ITEM_CHANGED, player);
-        //item->SaveToDB(CharacterDatabase.BeginTransaction());
-        int slotRand[3] = { -1, -1, -1 };
-        uint32 slotEnch[3] = { 7, 8, 10 };//原为5，7，8
-        //if (item->HasSocket()) {
-        //    slotEnch[0] = 5;
-        //    slotEnch[1] = 6;
-        //    slotEnch[2] = 7;
-        //}
-
-        // Fetching the configuration values as float
-        float enchantChance1 = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance1", 70.0f);
-        float enchantChance2 = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance2", 65.0f);
-        float enchantChance3 = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance3", 60.0f);
-
-        if (rand_chance() < enchantChance1)
-            slotRand[0] = getRandEnchantment(item);
-        if (slotRand[0] != -1 && rand_chance() < enchantChance2)
-            slotRand[1] = getRandEnchantment(item);
-        if (slotRand[1] != -1 && rand_chance() < enchantChance3)
-            slotRand[2] = getRandEnchantment(item);
-
-        for (int i = 0; i < 3; i++) {
-            if (slotRand[i] != -1) {
-                if (sSpellItemEnchantmentStore.LookupEntry(slotRand[i])) { //Make sure enchantment id exists
+        // 应用附魔到装备
+        for (int i = 0; i < 5; i++)
+        {
+            if (slotRand[i] != -1)
+            {
+                if (sSpellItemEnchantmentStore.LookupEntry(slotRand[i]))
+                {
                     player->ApplyEnchantment(item, EnchantmentSlot(slotEnch[i]), false);
                     item->SetEnchantment(EnchantmentSlot(slotEnch[i]), slotRand[i], 0, 0);
                     player->ApplyEnchantment(item, EnchantmentSlot(slotEnch[i]), true);
                 }
             }
         }
-        ChatHandler chathandle = ChatHandler(player->GetSession());
-        std::vector<std::string> localname = sObjectMgr->GetItemLocale(item->GetEntry())->Name;
-        std::string chineseName = localname.size() > 4 ? localname[4] : "";
-        if (slotRand[2] != -1)
-            //chathandle.PSendSysMessage("拾取 |cffFF0000 %s |r时获得|cffFF0000 3项 |r随机附魔!", item->GetTemplate()->Name1.c_str());
-            chathandle.PSendSysMessage("拾取|cffFF0000 {} |r时获得|cffFF0000 3项 |r随机附魔!", chineseName.c_str());
-        else if (slotRand[1] != -1)
-            chathandle.PSendSysMessage("拾取|cffFF0000 {} |r时获得|cffFF0000 2项 |r随机附魔!", chineseName.c_str());
-        else if (slotRand[0] != -1)
-            chathandle.PSendSysMessage("拾取|cffFF0000 {} |r时获得|cffFF0000 1项 |r随机附魔!", chineseName.c_str());
+
+        // 如果获得了随机附魔，发送提示消息
+        if (enchantCount > 0)
+        {
+            ChatHandler chathandle(player->GetSession());
+            // 获取物品模板
+            const ItemTemplate* itemTemplate = sObjectMgr->GetItemTemplate(item->GetEntry());
+            if (!itemTemplate)
+                return;
+
+            // 构建物品链接
+            std::ostringstream oss;
+            oss << "|c";
+            oss << std::hex << ItemQualityColors[itemTemplate->Quality] << std::dec;
+            oss << "|Hitem:";
+            oss << itemTemplate->ItemId;
+            oss << ":0:0:0:0:0:0:0:0:0|h[";
+
+            // 获取本地化名称（带兜底）
+            std::string itemName;
+            const ItemLocale* itemLocale = sObjectMgr->GetItemLocale(item->GetEntry());
+            if (itemLocale && !itemLocale->Name.empty())
+            {
+                int32 locIndex = player->GetSession()->GetSessionDbLocaleIndex();
+                if (locIndex >= 0 && locIndex < static_cast<int32>(itemLocale->Name.size()) && !itemLocale->Name[locIndex].empty())
+                    itemName = itemLocale->Name[locIndex];
+                else
+                    itemName = itemLocale->Name[0];  // 兜底：英文
+            }
+            if (itemName.empty())
+                itemName = itemTemplate->Name1;  // 最终兜底：物品模板的默认名字
+
+            oss << itemName;
+            oss << "]|h|r";
+
+            std::string itemLink = oss.str();
+
+            chathandle.PSendSysMessage(
+                "拾取{}时获得|cffFF0000{}项|r随机附魔!",
+                itemLink, enchantCount);
+        }
     }
 
     uint32 getRandEnchantment(Item* item) {
@@ -180,7 +245,7 @@ public:
         //if (Class == 0)
         //    return -1;
         //}
-        uint32 Quality = item->GetTemplate()->Quality;
+        /*uint32 Quality = item->GetTemplate()->Quality;
         uint32 ItemLevel = item->GetTemplate()->ItemLevel;
         int rarityRoll = -1;
         switch (Quality) {
@@ -224,8 +289,8 @@ public:
         else if(ItemLevel < 100) {
             // 装等50-99只能获得tier1或tier2
                 tier = 2;
-        }
-        QueryResult qr = WorldDatabase.Query("SELECT enchantID FROM item_enchantment_random_tiers WHERE tier='{}' AND (class='0' OR class='{}') ORDER BY RAND() LIMIT 1", tier, Class);
+        }*/
+        QueryResult qr = WorldDatabase.Query("SELECT enchantID FROM item_enchantment_random_tiers WHERE tier='{}' AND (class='0' OR class='{}') ORDER BY RAND() LIMIT 1", 5, Class);
         if (!qr)
             return -1;
         return qr->Fetch()[0].Get<uint32>();

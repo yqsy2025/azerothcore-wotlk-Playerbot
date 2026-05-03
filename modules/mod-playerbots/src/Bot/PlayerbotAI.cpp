@@ -266,77 +266,104 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     if (!CanUpdateAI())
         return;
 
-    // Handle the current spell
+    // Handle a spell that is still in its preparing phase (including channeled spells).
     Spell* currentSpell = bot->GetCurrentSpell(CURRENT_GENERIC_SPELL);
     if (!currentSpell)
         currentSpell = bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL);
 
     if (currentSpell)
     {
-        const SpellInfo* spellInfo = currentSpell->GetSpellInfo();
-        if (spellInfo && currentSpell->getState() == SPELL_STATE_PREPARING)
+        if (currentSpell->getState() == SPELL_STATE_PREPARING)
         {
-            Unit* spellTarget = currentSpell->m_targets.GetUnitTarget();
-            // Interrupt if target is dead or spell can't target dead units
-            if (spellTarget && !spellTarget->IsAlive() && !spellInfo->IsAllowingDeadTarget())
+            // Allow external scripts to interrupt a cast in progress
+            if (spellInterruptRequested)
             {
+                spellInterruptRequested = false;
                 InterruptSpell();
                 YieldThread(bot, GetReactDelay());
                 return;
             }
 
-            GameObject* goSpellTarget = currentSpell->m_targets.GetGOTarget();
-
-            if (goSpellTarget && !goSpellTarget->isSpawned())
+            const SpellInfo* spellInfo = currentSpell->GetSpellInfo();
+            if (spellInfo)
             {
-                InterruptSpell();
-                YieldThread(bot, GetReactDelay());
-                return;
-            }
-
-            bool isHeal = false;
-            bool isSingleTarget = true;
-
-            for (uint8 i = 0; i < 3; ++i)
-            {
-                if (!spellInfo->Effects[i].Effect)
-                    continue;
-
-                // Check if spell is a heal
-                if (spellInfo->Effects[i].Effect == SPELL_EFFECT_HEAL ||
-                    spellInfo->Effects[i].Effect == SPELL_EFFECT_HEAL_MAX_HEALTH ||
-                    spellInfo->Effects[i].Effect == SPELL_EFFECT_HEAL_MECHANICAL)
-                    isHeal = true;
-
-                // Check if spell is single-target
-                if ((spellInfo->Effects[i].TargetA.GetTarget() &&
-                     spellInfo->Effects[i].TargetA.GetTarget() != TARGET_UNIT_TARGET_ALLY) ||
-                    (spellInfo->Effects[i].TargetB.GetTarget() &&
-                     spellInfo->Effects[i].TargetB.GetTarget() != TARGET_UNIT_TARGET_ALLY))
+                Unit* spellTarget = currentSpell->m_targets.GetUnitTarget();
+                // Interrupt if target is dead or spell can't target dead units
+                if (spellTarget && !spellTarget->IsAlive() && !spellInfo->IsAllowingDeadTarget())
                 {
-                    isSingleTarget = false;
+                    InterruptSpell();
+                    YieldThread(bot, GetReactDelay());
+                    return;
                 }
-            }
 
-            // Interrupt if target ally has full health (heal by other member)
-            if (isHeal && isSingleTarget && spellTarget && spellTarget->IsFullHealth())
-            {
-                InterruptSpell();
+                GameObject* goSpellTarget = currentSpell->m_targets.GetGOTarget();
+
+                if (goSpellTarget && !goSpellTarget->isSpawned())
+                {
+                    InterruptSpell();
+                    YieldThread(bot, GetReactDelay());
+                    return;
+                }
+
+                bool isHeal = false;
+                bool isSingleTarget = true;
+
+                for (uint8 i = 0; i < 3; ++i)
+                {
+                    if (!spellInfo->Effects[i].Effect)
+                        continue;
+
+                    // Check if spell is a heal
+                    if (spellInfo->Effects[i].Effect == SPELL_EFFECT_HEAL ||
+                        spellInfo->Effects[i].Effect == SPELL_EFFECT_HEAL_MAX_HEALTH ||
+                        spellInfo->Effects[i].Effect == SPELL_EFFECT_HEAL_MECHANICAL)
+                        isHeal = true;
+
+                    // Check if spell is single-target
+                    if ((spellInfo->Effects[i].TargetA.GetTarget() &&
+                         spellInfo->Effects[i].TargetA.GetTarget() != TARGET_UNIT_TARGET_ALLY) ||
+                        (spellInfo->Effects[i].TargetB.GetTarget() &&
+                         spellInfo->Effects[i].TargetB.GetTarget() != TARGET_UNIT_TARGET_ALLY))
+                    {
+                        isSingleTarget = false;
+                    }
+                }
+
+                // Interrupt if target ally has full health (heal by other member)
+                if (isHeal && isSingleTarget && spellTarget && spellTarget->IsFullHealth())
+                {
+                    InterruptSpell();
+                    YieldThread(bot, GetReactDelay());
+                    return;
+                }
+
+                // Ensure bot is facing target if necessary
+                if (spellTarget && !bot->HasInArc(CAST_ANGLE_IN_FRONT, spellTarget) &&
+                    (spellInfo->FacingCasterFlags & SPELL_FACING_FLAG_INFRONT))
+                {
+                    ServerFacade::instance().SetFacingTo(bot, spellTarget);
+                }
+
+                // Wait for spell cast
                 YieldThread(bot, GetReactDelay());
                 return;
             }
+        }
+    }
 
-            // Ensure bot is facing target if necessary
-            if (spellTarget && !bot->HasInArc(CAST_ANGLE_IN_FRONT, spellTarget) &&
-                (spellInfo->FacingCasterFlags & SPELL_FACING_FLAG_INFRONT))
-            {
-                ServerFacade::instance().SetFacingTo(bot, spellTarget);
-            }
-
-            // Wait for spell cast
+    if (spellInterruptRequested)
+    {
+        // At this point the preparing-cast branch above did not consume the request.
+        // Interrupt a current channel if one still exists; otherwise, clear the stale request.
+        if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+        {
+            spellInterruptRequested = false;
+            InterruptSpell();
             YieldThread(bot, GetReactDelay());
             return;
         }
+
+        spellInterruptRequested = false;
     }
 
     // Handle transport check delay
@@ -386,38 +413,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
     Group* group = bot->GetGroup();
 
     bool IsRandomBot = sRandomPlayerbotMgr.IsRandomBot(bot);
-/*    if (group && !bot->InBattleground() && !group->isLFGGroup())
-    {
-        uint32 botCount = 0;
-        uint32 realPlayerCount = 0;
-        uint32 teleportingCount = 0;
-        Group::MemberSlotList const& members = group->GetMemberSlots();
-        for (Group::MemberSlot const& slot : members)
-        {
-            if (Player* member = ObjectAccessor::FindPlayer(slot.guid))
-            {
-                if (!member->GetSession())
-                    continue;
-                if (member->IsBeingTeleported() || !member->IsAlive())
-                {
-                    teleportingCount++;
-                    continue;  // 直接跳过，不再判断机器人/真人
-                }
-                if (member->GetSession()->IsBot())
-                    botCount++;
-                else
-                    realPlayerCount++;
-            }
-        }
 
-        // 添加安全检查，确保配置存在
-        if (botCount > (realPlayerCount + teleportingCount) * sPlayerbotAIConfig.botcount)
-        {
-            if (GetMaster() && realPlayerCount > 0)
-                botAI->TellMaster("机器人数量超出限制!");
-            LeaveOrDisbandGroup();
-        }
-    }*/
     // If bot is not in group verify that for is RandomBot before clearing  master and resetting.
     if (!group)
     {
@@ -437,6 +433,13 @@ void PlayerbotAI::UpdateAIGroupMaster()
     // 第三部分：寻找新主人
     if (group && !bot->InBattleground())
     {
+        if (bot && bot->GetVictim() && bot->IsInCombatWith(bot->GetVictim()))  // 防御光环和仇恨之怒
+        {
+            if (botAI->IsMainTank(bot, false) && !bot->HasAura(36886))
+                bot->AddAura(36886, bot);
+            if ((bot->GetHealth() < bot->GetMaxHealth() * 0.5f) && botAI->IsTank(bot, true) && !bot->HasAura(41105))
+                bot->AddAura(41105, bot);
+        }
         if (GetMaster() && HasRealPlayerMaster() &&
             (!GetMaster()->GetSession() || !group->IsMember(GetMaster()->GetGUID())))
         {
@@ -454,7 +457,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
             ResetStrategies();
             return;
         }
-        if (GetMaster() && HasRealPlayerMaster() &&
+        if (GetMaster() && HasRealPlayerMaster() && GetMaster()->IsAlive() &&
             (bot->IsInSameGroupWith(GetMaster()) || bot->IsInSameRaidWith(GetMaster())))
         {
             if (bot->GetMap() && GetMaster()->GetMap() && bot->GetMap() != GetMaster()->GetMap() &&
@@ -921,6 +924,7 @@ void PlayerbotAI::Reset(bool full)
     aiObjectContext->GetValue<Unit*>("current target")->Set(nullptr);
     aiObjectContext->GetValue<GuidVector>("prioritized targets")->Reset();
     aiObjectContext->GetValue<ObjectGuid>("pull target")->Set(ObjectGuid::Empty);
+    aiObjectContext->GetValue<ObjectGuid>("pull strategy target")->Set(ObjectGuid::Empty);
     aiObjectContext->GetValue<GuidPosition>("rpg target")->Set(GuidPosition());
     aiObjectContext->GetValue<LootObject>("loot target")->Set(LootObject());
     aiObjectContext->GetValue<uint32>("lfg proposal")->Set(0);
@@ -1530,6 +1534,7 @@ void PlayerbotAI::DoNextAction(bool min)
         aiObjectContext->GetValue<Unit*>("current target")->Set(nullptr);
         aiObjectContext->GetValue<Unit*>("enemy player target")->Set(nullptr);
         aiObjectContext->GetValue<ObjectGuid>("pull target")->Set(ObjectGuid::Empty);
+        aiObjectContext->GetValue<ObjectGuid>("pull strategy target")->Set(ObjectGuid::Empty);
         aiObjectContext->GetValue<LootObject>("loot target")->Set(LootObject());
 
         ChangeEngine(BOT_STATE_DEAD);
@@ -1639,7 +1644,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     static const std::vector<std::string> allInstanceStrategies =
     {
         "aq20", "bwl", "karazhan", "gruulslair", "icc", "magtheridon", "moltencore",
-        "naxx", "onyxia", "ssc", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos",
+        "naxx", "onyxia", "ssc", "tbc-ac", "tempestkeep", "ulduar", "voa", "wotlk-an", "wotlk-cos",
         "wotlk-dtk", "wotlk-eoe", "wotlk-fos", "wotlk-gd", "wotlk-hol", "wotlk-hor",
         "wotlk-hos", "wotlk-nex", "wotlk-occ", "wotlk-ok", "wotlk-os", "wotlk-pos",
         "wotlk-toc", "wotlk-uk", "wotlk-up", "wotlk-vh", "zulaman"
@@ -1679,7 +1684,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             strategyName = "ssc";  // Serpentshrine Cavern
             break;
         case 550:
-            strategyName = "tempestkeep";  // Tempest Keep
+            strategyName = "tempestkeep";  // Tempest Keep: The Eye
+            break;
+        case 558:
+            strategyName = "tbc-ac"; // Auchindoun: Auchenai Crypts
             break;
         case 565:
             strategyName = "gruulslair";  // Gruul's Lair
@@ -1855,6 +1863,11 @@ bool PlayerbotAI::ContainsStrategy(StrategyType type)
 }
 
 bool PlayerbotAI::HasStrategy(std::string const name, BotState type) { return engines[type]->HasStrategy(name); }
+
+Strategy* PlayerbotAI::GetStrategy(std::string const name, BotState type)
+{
+    return engines[type] ? engines[type]->GetStrategy(name) : nullptr;
+}
 
 void PlayerbotAI::ResetStrategies(bool load)
 {
@@ -4269,6 +4282,19 @@ void PlayerbotAI::RemoveAura(std::string const name)
         bot->RemoveAurasDueToSpell(spellid);
 }
 
+void PlayerbotAI::RequestSpellInterrupt()
+{
+    Spell* currentSpell = bot->GetCurrentSpell(CURRENT_GENERIC_SPELL);
+    if (currentSpell && currentSpell->getState() == SPELL_STATE_PREPARING)
+    {
+        spellInterruptRequested = true;
+        return;
+    }
+
+    if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+        spellInterruptRequested = true;
+}
+
 bool PlayerbotAI::IsInterruptableSpellCasting(Unit* target, std::string const spell)
 {
     if (!IsValidUnit(target))
@@ -4388,48 +4414,6 @@ bool IsAlliance(uint8 race)
            race == RACE_DRAENEI;
 }
 
-/*Player* PlayerbotAI::FindNewMaster()
-{
-    // Ideally we want to have the leader as master.
-    Group* group = bot->GetGroup();
-    // Only allow real players as masters unless in battleground.
-    if (!group)
-        return nullptr;
-
-    Player* groupLeader = GetGroupLeader();
-    PlayerbotAI* leaderBotAI = GET_PLAYERBOT_AI(groupLeader);
-    if (!leaderBotAI || leaderBotAI->IsRealPlayer())
-        return groupLeader;
-
-    // Find the real player in group
-    for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
-    {
-        Player* member = gref->GetSource();
-        if (!member || member == bot || !member->IsInWorld() || !member->IsInSameRaidWith(bot))
-            continue;
-
-        PlayerbotAI* memberBotAI = GET_PLAYERBOT_AI(member);
-        if ((!memberBotAI || memberBotAI->IsRealPlayer()) && !bot->InBattleground())
-            return member;
-
-        if (bot->InBattleground() && bot->GetBattleground() &&
-            bot->GetBattleground()->GetBgTypeID() == BATTLEGROUND_AV && !GET_PLAYERBOT_AI(member) &&
-            member->InBattleground() && bot->GetMapId() == member->GetMapId())
-        {
-            // Skip if same BG but same subgroup or lower level
-            if (!group->SameSubGroup(bot, member) || member->GetLevel() < bot->GetLevel())
-                continue;
-
-            // Follow real player only if higher honor points
-            uint32 honorpts = member->GetHonorPoints();
-            if (bot->GetHonorPoints() && honorpts < bot->GetHonorPoints())
-                continue;
-
-            return member;
-        }
-    }
-    return nullptr;
-}*/
 Player* PlayerbotAI::FindNewMaster()
 {
     Group* group = bot->GetGroup();

@@ -11,7 +11,6 @@
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "Playerbots.h"
-#include "ServerFacade.h"
 #include "Corpse.h"
 #include "Log.h"
 
@@ -33,7 +32,7 @@ bool ReleaseSpiritAction::Execute(Event event)
 
     if (bot->GetCorpse() && bot->HasPlayerFlag(PLAYER_FLAGS_GHOST))
     {
-        botAI->TellMasterNoFacing("I am already a spirit");
+        botAI->TellMasterNoFacing("我已经是灵魂状态");
         return false;
     }
 
