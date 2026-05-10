@@ -42,6 +42,7 @@
 #include "PlayerbotGuildMgr.h"
 #include "Playerbots.h"
 #include "PositionValue.h"
+#include "RBAC.h"
 #include "RandomPlayerbotMgr.h"
 #include "SayAction.h"
 #include "ScriptMgr.h"
@@ -54,9 +55,9 @@
 #include "Unit.h"
 #include "UpdateTime.h"
 #include "Vehicle.h"
-#include "../../../../src/server/scripts/Spells/spell_dk.cpp"
 
-const int SPELL_TITAN_GRIP = 49152;
+constexpr uint32 SPELL_TITAN_GRIP = 49152;
+constexpr uint32 SPELL_DK_FROST_PRESENCE = 48263;
 
 std::vector<std::string> PlayerbotAI::dispel_whitelist = {
     "mutating injection",
@@ -548,7 +549,7 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
             continue;
         }
 
-        ChatReplyAction::ChatReplyDo(bot, it->m_type, it->m_guid1, it->m_guid2, it->m_msg, it->m_chanName, it->m_name);
+        ChatReplyAction::ChatReplyDo(bot, it->m_type, it->m_guid1, it->m_msg, it->m_chanName, it->m_name);
         it = chatReplies.erase(it);
     }
 
@@ -563,15 +564,14 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
             logout = true;
 
         if (bot->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || bot->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
-            botWorldSessionPtr->GetSecurity() >= (AccountTypes)sWorld->getIntConfig(CONFIG_INSTANT_LOGOUT))
+            botWorldSessionPtr->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))
         {
             logout = true;
         }
 
         if (master &&
             (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
-             (master->GetSession() &&
-              master->GetSession()->GetSecurity() >= (AccountTypes)sWorld->getIntConfig(CONFIG_INSTANT_LOGOUT))))
+             (master->GetSession() && master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
         {
             logout = true;
         }
@@ -1869,7 +1869,7 @@ Strategy* PlayerbotAI::GetStrategy(std::string const name, BotState type)
     return engines[type] ? engines[type]->GetStrategy(name) : nullptr;
 }
 
-void PlayerbotAI::ResetStrategies(bool load)
+void PlayerbotAI::ResetStrategies(bool /*load*/)
 {
     for (uint8 i = 0; i < BOT_STATE_MAX; i++)
         engines[i]->removeAllStrategies();
@@ -3019,7 +3019,7 @@ bool PlayerbotAI::IsTellAllowed(PlayerbotSecurityLevel securityLevel)
         return false;
 
     if (sPlayerbotAIConfig.whisperDistance && !bot->GetGroup() && sRandomPlayerbotMgr.IsRandomBot(bot) &&
-        master->GetSession()->GetSecurity() < SEC_GAMEMASTER &&
+        !master->CanBeGameMaster() &&
         (bot->GetMapId() != master->GetMapId() ||
          ServerFacade::instance().GetDistance2d(bot, master) > sPlayerbotAIConfig.whisperDistance))
         return false;
@@ -4421,14 +4421,14 @@ Player* PlayerbotAI::FindNewMaster()
         return nullptr;
 
     // 1. 非团队模式：直接返回队长
-    if (!group->isRaidGroup())
+/*    if (!group->isRaidGroup())
     {
         Player* leader = GetGroupLeader();
         // 检查队长是否是真实玩家
         if (leader && !GET_PLAYERBOT_AI(leader))
             return leader;
         return nullptr;
-    }
+    }*/
 
     // 2. 团队模式：使用局部变量减少重复调用
     Player* groupLeader = GetGroupLeader();

@@ -77,10 +77,10 @@ namespace Acore::Impl::Readline
 void utf8print(void* /*arg*/, std::string_view str)
 {
 #if AC_PLATFORM == AC_PLATFORM_WINDOWS
-    fmt::print(str);
+    fmt::print("{}", str);
 #else
 {
-    fmt::print(str);
+    fmt::print("{}", str);
     fflush(stdout);
 }
 #endif
@@ -114,17 +114,9 @@ void CliThread()
     // Set console code pages to UTF-8
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
+
     // print this here the first time
     // later it will be printed after command queue updates
-        // 启用虚拟终端处理以支持 ANSI 转义序列
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hOut != INVALID_HANDLE_VALUE)
-    {
-        DWORD dwMode = 0;
-        GetConsoleMode(hOut, &dwMode);
-        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-        SetConsoleMode(hOut, dwMode);
-    }
     PrintCliPrefix();
 #else
     ::rl_attempted_completion_function = &Acore::Impl::Readline::cli_completion;
