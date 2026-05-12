@@ -1588,6 +1588,8 @@ QueryCallback WorldSession::LoadPermissionsAsync()
 
 bool WorldSession::HasPermission(uint32 permission)
 {
+    if(IsBot())
+        return true;
     if (!_RBACData)
         LoadPermissions();
 
