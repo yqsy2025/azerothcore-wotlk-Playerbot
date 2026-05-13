@@ -433,6 +433,9 @@ void PlayerbotAI::UpdateAIGroupMaster()
     // 第三部分：寻找新主人
     if (group && !bot->InBattleground())
     {
+        if ((!bot->IsInCombat() && bot->HasAura(36886)) ||
+            (bot->HasAura(36886) && bot->GetMap() && !bot->GetMap()->IsDungeon()))
+            bot->RemoveAura(36886);
         if (bot && bot->GetVictim() && bot->IsInCombatWith(bot->GetVictim()))  // 防御光环和仇恨之怒
         {
             if (botAI->IsMainTank(bot, false) && !bot->HasAura(36886))
@@ -4427,7 +4430,7 @@ Player* PlayerbotAI::FindNewMaster()
         // 检查队长是否是真实玩家
         if (leader && !GET_PLAYERBOT_AI(leader))
             return leader;
-        return nullptr;
+        //return nullptr;
     }
 
     // 2. 团队模式：使用局部变量减少重复调用

@@ -725,7 +725,12 @@ private:
 struct advisor_baseAI : public ScriptedAI
 
 {
-    advisor_baseAI(Creature* creature) : ScriptedAI(creature) {    }
+    advisor_baseAI(Creature* creature) : ScriptedAI(creature) {
+        scheduler.SetValidator([this]
+        {
+            return !me->HasUnitState(UNIT_STATE_CASTING);
+        });
+    }
 
     virtual void ScheduleEvents() {}
 
@@ -1083,7 +1088,7 @@ class spell_kaelthas_nether_beam : public SpellScript
         {
             if (Unit* target = ref->GetVictim())
             {
-                if (target->IsPlayer())
+            	if (target && target->IsPlayer())
                     targetList.push_back(target);
             }
         }
