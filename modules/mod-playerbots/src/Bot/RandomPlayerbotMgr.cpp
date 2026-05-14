@@ -278,7 +278,7 @@ void RandomPlayerbotMgr::LogPlayerLocation()
     }
 }
 
-void RandomPlayerbotMgr::UpdateAIInternal(uint32 elapsed, bool /*minimal*/)
+void RandomPlayerbotMgr::UpdateAIInternal(uint32 /*elapsed*/, bool /*minimal*/)
 {
     if (totalPmo)
         totalPmo->finish();
@@ -2084,7 +2084,7 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
 
     bot->DurabilityRepairAll(false, 1.0f, false);
     bot->SetFullHealth();
-    bot->SetPvP(true);
+    bot->SetPvP(sWorld->IsPvPRealm());
     PlayerbotFactory factory(bot, bot->GetLevel(),
                              botAI->IsTank(bot) ? ITEM_QUALITY_EPIC : 0  // 坦克用史诗，其他用默认
     );
@@ -2276,6 +2276,16 @@ CachedEvent* RandomPlayerbotMgr::FindEvent(uint32 bot, std::string const& event)
     }
 
     return &e;
+}
+
+bool RandomPlayerbotMgr::IsSpecPvp(uint32 bot, uint8 cls)
+{
+    uint32 stored = GetValue(bot, "specNo");
+    if (!stored)
+        return false;
+    uint32 specIndex = stored - 1;
+    std::string const& name = sPlayerbotAIConfig.premadeSpecName[cls][specIndex];
+    return !name.empty() && name.find("pvp") != std::string::npos;
 }
 
 uint32 RandomPlayerbotMgr::GetEventValue(uint32 bot, std::string const& event)
@@ -2543,12 +2553,14 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
             _isBotLogging = false;
         }
     }
+
     // Run guild recovery/assignment at login to handle empty guild tables after restart.
     if (sPlayerbotAIConfig.randomBotGuildCount > 0)
     {
         PlayerbotFactory factory(bot, bot->GetLevel());
         factory.InitGuild();
     }
+
     if (sPlayerbotAIConfig.randomBotFixedLevel)
     {
         bot->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
@@ -2642,6 +2654,7 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
     {
         // ObjectGuid::LowType guid = player->GetGUID().GetCounter(); //not used, conditional could be rewritten for
         // simplicity. line marked for removal.
+        player->SetPvP(sWorld->IsPvPRealm());
     }
     else
     {

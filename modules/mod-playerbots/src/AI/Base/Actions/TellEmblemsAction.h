@@ -3,18 +3,17 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
-#ifndef _PLAYERBOT_ACCEPTINVITATIONACTION_H
-#define _PLAYERBOT_ACCEPTINVITATIONACTION_H
+#ifndef _PLAYERBOT_TELLEMBLEMSACTION_H
+#define _PLAYERBOT_TELLEMBLEMSACTION_H
 
-#include "Action.h"
-#include "UseMeetingStoneAction.h"
+#include "InventoryAction.h"
 
 class PlayerbotAI;
 
-class AcceptInvitationAction : public SummonAction
+class TellEmblemsAction : public InventoryAction
 {
 public:
-    AcceptInvitationAction(PlayerbotAI* botAI) : SummonAction(botAI, "accept invitation") {}
+    TellEmblemsAction(PlayerbotAI* botAI) : InventoryAction(botAI, "emblems") {}
 
     bool Execute(Event event) override;
 };
