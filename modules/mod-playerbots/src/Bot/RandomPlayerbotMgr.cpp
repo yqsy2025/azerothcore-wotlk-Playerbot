@@ -2085,7 +2085,8 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     bot->DurabilityRepairAll(false, 1.0f, false);
     bot->SetFullHealth();
     bot->SetPvP(sWorld->IsPvPRealm());
-    PlayerbotFactory factory(bot, bot->GetLevel(), (botAI->IsTank(bot) || botAI->IsHeal(bot)) ? ITEM_QUALITY_EPIC : 0);
+    //PlayerbotFactory factory(bot, bot->GetLevel(),(botAI->IsTank(bot) || botAI->IsHeal(bot)) ? ITEM_QUALITY_LEGENDARY : 0);
+    PlayerbotFactory factory(bot, bot->GetLevel());
     factory.Refresh();
 
     if (bot->GetMaxPower(POWER_MANA) > 0)

@@ -810,11 +810,11 @@ void PlayerbotFactory::Randomize(bool incremental)
 
 void PlayerbotFactory::Refresh()
 {
-    // Prepare();
-    // if (!sPlayerbotAIConfig.equipmentPersistence || bot->GetLevel() < sPlayerbotAIConfig.equipmentPersistenceLevel)
-    // {
-    //     InitEquipment(true);
-    // }
+     //Prepare();
+     //if (!sPlayerbotAIConfig.equipmentPersistence || bot->GetLevel() < sPlayerbotAIConfig.equipmentPersistenceLevel)
+     //{
+     //InitEquipment(false);
+     //}
     InitAttunementQuests();
     ClearInventory();
     InitAmmo();
@@ -2040,6 +2040,11 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
     if (incremental && !sPlayerbotAIConfig.incrementalGearInit)
         return;
 
+    if ((botAI->IsTank(bot,1) || botAI->IsHeal(bot,1)) && level >= 60)
+    {
+        incremental = false;  // 坦克奶妈强制非增量模式，一定会替换
+    }
+
     if (level < 5)
     {
         // original items
@@ -2170,7 +2175,9 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
             continue;
         }
 
-        int32 desiredQuality = itemQuality;
+        //int32 desiredQuality = itemQuality;// 坦克和奶妈强制使用紫色装备
+        int32 desiredQuality =
+            ((botAI->IsTank(bot,1) || botAI->IsHeal(bot,1)) && level >= 60) ? ITEM_QUALITY_EPIC : itemQuality;
         if (urand(0, 100) < 100 * sPlayerbotAIConfig.randomGearLoweringChance && desiredQuality > ITEM_QUALITY_NORMAL)
             desiredQuality--;
 
@@ -2232,8 +2239,9 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
                     }
                 }
             }
-        } while (items[slot].size() < 25 && desiredQuality-- > ITEM_QUALITY_POOR);
-
+        //} while (items[slot].size() < 25 && desiredQuality-- > ITEM_QUALITY_POOR);
+          } while (items[slot].size() < 25 && desiredQuality != ITEM_QUALITY_EPIC &&
+                   desiredQuality-- > ITEM_QUALITY_POOR);
         std::vector<uint32>& ids = items[slot];
         if (ids.empty())
         {
