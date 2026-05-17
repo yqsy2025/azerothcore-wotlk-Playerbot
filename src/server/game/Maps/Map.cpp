@@ -2737,12 +2737,27 @@ void Map::ProcessRespawns()
 
 void Map::ProcessCreatureRespawn(ObjectGuid::LowType spawnId)
 {
+<<<<<<< Updated upstream
     // Pool members are handled entirely by PoolMgr
     if (uint32 poolId = sPoolMgr->IsPartOfAPool<Creature>(spawnId))
     {
         sPoolMgr->UpdatePool<Creature>(poolId, spawnId);
         RemoveCreatureRespawnTime(spawnId);
         return;
+=======
+    // Pool members in non-instanced maps are handled entirely by PoolMgr.
+    // In instanced maps the pool system operates globally and Spawn1Object is
+    // a no-op for instanceable maps, so fall through to the normal per-instance
+    // respawn logic instead.
+    if (!Instanceable())
+    {
+        if (uint32 poolId = sPoolMgr->IsPartOfAPool<Creature>(spawnId))
+        {
+            sPoolMgr->UpdatePool<Creature>(poolId, spawnId);
+            RemoveCreatureRespawnTime(spawnId);
+            return;
+        }
+>>>>>>> Stashed changes
     }
 
     CreatureData const* data = sObjectMgr->GetCreatureData(spawnId);
@@ -2798,12 +2813,25 @@ void Map::ProcessCreatureRespawn(ObjectGuid::LowType spawnId)
 
 void Map::ProcessGameObjectRespawn(ObjectGuid::LowType spawnId)
 {
+<<<<<<< Updated upstream
     // Pool members are handled entirely by PoolMgr
     if (uint32 poolId = sPoolMgr->IsPartOfAPool<GameObject>(spawnId))
     {
         sPoolMgr->UpdatePool<GameObject>(poolId, spawnId);
         RemoveGORespawnTime(spawnId);
         return;
+=======
+    // Same rationale as ProcessCreatureRespawn: pool management via PoolMgr is
+    // only meaningful for non-instanced maps where Spawn1Object actually spawns.
+    if (!Instanceable())
+    {
+        if (uint32 poolId = sPoolMgr->IsPartOfAPool<GameObject>(spawnId))
+        {
+            sPoolMgr->UpdatePool<GameObject>(poolId, spawnId);
+            RemoveGORespawnTime(spawnId);
+            return;
+        }
+>>>>>>> Stashed changes
     }
 
     GameObjectData const* data = sObjectMgr->GetGameObjectData(spawnId);

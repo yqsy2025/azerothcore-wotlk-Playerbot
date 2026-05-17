@@ -51,7 +51,11 @@ public:
             { "item",     HandleListItemCommand,        rbac::RBAC_PERM_COMMAND_LIST_ITEM,     Console::Yes },
             { "object",   HandleListObjectCommand,      rbac::RBAC_PERM_COMMAND_LIST_OBJECT,   Console::Yes },
             { "auras",    listAurasCommandTable },
+<<<<<<< Updated upstream
             { "respawns", HandleListRespawnsCommand,    rbac::RBAC_PERM_COMMAND_LIST_CREATURE, Console::No },
+=======
+            { "respawns", HandleListRespawnsCommand,    rbac::RBAC_PERM_COMMAND_LIST_RESPAWNS, Console::Yes },
+>>>>>>> Stashed changes
         };
         static ChatCommandTable commandTable =
         {
@@ -521,6 +525,7 @@ public:
         return true;
     }
 
+<<<<<<< Updated upstream
     static bool HandleListRespawnsCommand(ChatHandler* handler)
     {
         Player* player = handler->GetSession()->GetPlayer();
@@ -528,6 +533,37 @@ public:
             return false;
 
         Map* map = player->GetMap();
+=======
+    static bool HandleListRespawnsCommand(ChatHandler* handler, Optional<uint32> firstArg, Optional<uint32> secondArg, Optional<uint32> thirdArg)
+    {
+        Map* map = nullptr;
+        Optional<uint32> entryFilter;
+
+        if (handler->GetSession())
+        {
+            // In-game: first arg = entryId (optional), use player's current map
+            map = handler->GetSession()->GetPlayer()->GetMap();
+            entryFilter = firstArg;
+        }
+        else
+        {
+            // Console: first arg = mapId (required), second = instanceId, third = entryId
+            if (!firstArg)
+            {
+                handler->SendSysMessage(LANG_LIST_RESPAWNS_NO_MAP);
+                return false;
+            }
+            map = sMapMgr->FindMap(*firstArg, secondArg.value_or(0));
+            entryFilter = thirdArg;
+        }
+
+        if (!map)
+        {
+            handler->PSendSysMessage(LANG_RESPAWN_GUID_MAP_NOT_LOADED, firstArg.value_or(0));
+            return false;
+        }
+
+>>>>>>> Stashed changes
         uint32 count = 0;
         time_t now = GameTime::GetGameTime().count();
 
@@ -535,7 +571,11 @@ public:
         for (auto const& pair : map->GetCreatureRespawnTimes())
         {
             CreatureData const* data = sObjectMgr->GetCreatureData(pair.first);
+<<<<<<< Updated upstream
             if (!data)
+=======
+            if (!data || (entryFilter && data->id1 != *entryFilter))
+>>>>>>> Stashed changes
                 continue;
 
             CreatureTemplate const* cTemplate = sObjectMgr->GetCreatureTemplate(data->id1);
@@ -555,7 +595,11 @@ public:
         for (auto const& pair : map->GetGORespawnTimes())
         {
             GameObjectData const* data = sObjectMgr->GetGameObjectData(pair.first);
+<<<<<<< Updated upstream
             if (!data)
+=======
+            if (!data || (entryFilter && data->id != *entryFilter))
+>>>>>>> Stashed changes
                 continue;
 
             GameObjectTemplate const* goTemplate = sObjectMgr->GetGameObjectTemplate(data->id);

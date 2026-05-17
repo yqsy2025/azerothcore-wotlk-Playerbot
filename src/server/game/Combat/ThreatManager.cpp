@@ -559,6 +559,11 @@ void ThreatManager::ResetAllThreat()
 
 void ThreatManager::ClearThreat(Unit* target)
 {
+    // 核心修复：防止对无效对象操作crash
+    if (!target)
+    {
+        return;
+    }
     auto it = _myThreatListEntries.find(target->GetGUID());
     if (it != _myThreatListEntries.end())
         ClearThreat(it->second);
