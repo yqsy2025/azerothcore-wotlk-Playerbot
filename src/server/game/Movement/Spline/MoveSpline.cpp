@@ -199,7 +199,7 @@ namespace Movement
 
     /// ============================================================================================
 
-    bool MoveSplineInitArgs::Validate(Unit* unit) const
+/*    bool MoveSplineInitArgs::Validate(Unit* unit) const
     {
 #define CHECK(exp) \
         if (!(exp)) \
@@ -212,6 +212,38 @@ namespace Movement
         }
         CHECK(path.size() > 1);
         CHECK(velocity > 0.01f);
+        CHECK(time_perc >= 0.f && time_perc <= 1.f);
+        //CHECK(_checkPathBounds());
+        return true;
+#undef CHECK
+    }*/
+    bool MoveSplineInitArgs::Validate(Unit* unit) const
+    {
+#define CHECK(exp) \
+    if (!(exp)) \
+    { \
+        if (unit) \
+            LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: 表达式 '{}' 验证失败，目标: {}", #exp, unit->GetGUID().ToString()); \
+        else \
+            LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: 表达式 '{}' 验证失败，于循环样条延续", #exp); \
+        return false;\
+    }
+        CHECK(path.size() > 1);
+        // CHECK(velocity > 0.01f);  // 已替换为下方的容错逻辑
+
+        // *** 增加容错处理（中文日志版） ***
+        if (velocity <= 0.01f)
+        {
+            if (unit)
+                LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: 检测到无效速度 {}，已强制修正为 1.0f。目标: GUID: {}, 生物ID: {}, 坐标: ({:.2f}, {:.2f}, {:.2f})",
+                    velocity, unit->GetGUID().ToString(), unit->GetEntry(), unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ());
+            else
+                LOG_ERROR("misc.movesplineinitargs", "MoveSplineInitArgs::Validate: 检测到无效速度 {}，已强制修正为 1.0f，于循环样条延续", velocity);
+
+            const_cast<MoveSplineInitArgs*>(this)->velocity = 1.0f;
+        }
+        // *** 容错处理结束 ***
+
         CHECK(time_perc >= 0.f && time_perc <= 1.f);
         //CHECK(_checkPathBounds());
         return true;

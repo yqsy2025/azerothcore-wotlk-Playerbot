@@ -810,11 +810,11 @@ void PlayerbotFactory::Randomize(bool incremental)
 
 void PlayerbotFactory::Refresh()
 {
-    // Prepare();
-    // if (!sPlayerbotAIConfig.equipmentPersistence || bot->GetLevel() < sPlayerbotAIConfig.equipmentPersistenceLevel)
-    // {
-    //     InitEquipment(true);
-    // }
+     //Prepare();
+     //if (!sPlayerbotAIConfig.equipmentPersistence || bot->GetLevel() < sPlayerbotAIConfig.equipmentPersistenceLevel)
+     //{
+     //InitEquipment(false);
+     //}
     InitAttunementQuests();
     ClearInventory();
     InitAmmo();
@@ -2040,6 +2040,11 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
     if (incremental && !sPlayerbotAIConfig.incrementalGearInit)
         return;
 
+    if ((botAI->IsTank(bot,1) || botAI->IsHeal(bot,1)) && level >= 60)
+    {
+        incremental = false;  // 坦克奶妈强制非增量模式，一定会替换
+    }
+
     if (level < 5)
     {
         // original items
@@ -2170,7 +2175,9 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
             continue;
         }
 
-        int32 desiredQuality = itemQuality;
+        //int32 desiredQuality = itemQuality;// 坦克和奶妈强制使用紫色装备
+        int32 desiredQuality =
+            ((botAI->IsTank(bot,1) || botAI->IsHeal(bot,1)) && level >= 60) ? ITEM_QUALITY_EPIC : itemQuality;
         if (urand(0, 100) < 100 * sPlayerbotAIConfig.randomGearLoweringChance && desiredQuality > ITEM_QUALITY_NORMAL)
             desiredQuality--;
 
@@ -2232,8 +2239,9 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool second_chance)
                     }
                 }
             }
-        } while (items[slot].size() < 25 && desiredQuality-- > ITEM_QUALITY_POOR);
-
+        //} while (items[slot].size() < 25 && desiredQuality-- > ITEM_QUALITY_POOR);
+          } while (items[slot].size() < 25 && desiredQuality != ITEM_QUALITY_EPIC &&
+                   desiredQuality-- > ITEM_QUALITY_POOR);
         std::vector<uint32>& ids = items[slot];
         if (ids.empty())
         {
@@ -5344,6 +5352,36 @@ void PlayerbotFactory::InitAttunementQuests()
     uint32 level = bot->GetLevel();
     if (level < 55)
         return; // Only apply for level 55+ bots
+    // 阵营专属任务ID集合（对方阵营的，需要跳过）
+    static const std::set<uint32> allianceOnlyQuests = {24507, 24511, 24712};
+    static const std::set<uint32> hordeOnlyQuests = {24500, 24506, 24710};
+    bool isAlliance = (bot->GetTeamId() == TEAM_ALLIANCE);
+    if (level >= 60 && !sPlayerbotAIConfig.attunementQuests.empty())
+    {
+        // 检查是否所有调谐任务都已完成
+        bool allCompleted = true;
+
+        for (uint32 questId : sPlayerbotAIConfig.attunementQuests)
+        {
+            if (isAlliance && hordeOnlyQuests.find(questId) != hordeOnlyQuests.end())
+                continue;
+
+            if (!isAlliance && allianceOnlyQuests.find(questId) != allianceOnlyQuests.end())
+                continue;
+            QuestStatus status = bot->GetQuestStatus(questId);
+            if (status != QUEST_STATUS_COMPLETE)
+            {
+                allCompleted = false;
+                break;  // 发现未完成的，立即退出
+            }
+        }
+
+        // 如果全部完成，直接返回
+        if (allCompleted)
+        {
+            return;
+        }
+    }
 
     uint32 currentXP = bot->GetUInt32Value(PLAYER_XP);
 
@@ -5351,10 +5389,17 @@ void PlayerbotFactory::InitAttunementQuests()
     if (level >= 60)
     {
         std::list<uint32> questsToComplete;
-
+        // 获取机器人阵营
+        bool isAlliance = (bot->GetTeamId() == TEAM_ALLIANCE);
         // Check each quest status before adding to the completion list
         for (uint32 questId : sPlayerbotAIConfig.attunementQuests)
         {
+            if (isAlliance && hordeOnlyQuests.find(questId) != hordeOnlyQuests.end())
+                continue;
+
+            if (!isAlliance && allianceOnlyQuests.find(questId) != allianceOnlyQuests.end())
+                continue;
+
             QuestStatus questStatus = bot->GetQuestStatus(questId);
 
             if (questStatus == QUEST_STATUS_NONE) // Quest not yet taken/completed

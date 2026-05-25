@@ -199,10 +199,12 @@ ChatCommandHandlerStrategy::ChatCommandHandlerStrategy(PlayerbotAI* botAI) : Pas
     supported.push_back("rtsc");
     supported.push_back("drink");
     supported.push_back("calc");
+    supported.push_back("roll");
     supported.push_back("open items");
     supported.push_back("qi");
     supported.push_back("unlock items");
     supported.push_back("unlock traded item");
+    supported.push_back("wipe");
     supported.push_back("tame");
     supported.push_back("glyphs");
     supported.push_back("glyph equip");

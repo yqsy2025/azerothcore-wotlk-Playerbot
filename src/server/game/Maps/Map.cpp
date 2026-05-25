@@ -2737,12 +2737,18 @@ void Map::ProcessRespawns()
 
 void Map::ProcessCreatureRespawn(ObjectGuid::LowType spawnId)
 {
-    // Pool members are handled entirely by PoolMgr
-    if (uint32 poolId = sPoolMgr->IsPartOfAPool<Creature>(spawnId))
+    // Pool members in non-instanced maps are handled entirely by PoolMgr.
+    // In instanced maps the pool system operates globally and Spawn1Object is
+    // a no-op for instanceable maps, so fall through to the normal per-instance
+    // respawn logic instead.
+    if (!Instanceable())
     {
-        sPoolMgr->UpdatePool<Creature>(poolId, spawnId);
-        RemoveCreatureRespawnTime(spawnId);
-        return;
+        if (uint32 poolId = sPoolMgr->IsPartOfAPool<Creature>(spawnId))
+        {
+            sPoolMgr->UpdatePool<Creature>(poolId, spawnId);
+            RemoveCreatureRespawnTime(spawnId);
+            return;
+        }
     }
 
     CreatureData const* data = sObjectMgr->GetCreatureData(spawnId);
@@ -2798,12 +2804,16 @@ void Map::ProcessCreatureRespawn(ObjectGuid::LowType spawnId)
 
 void Map::ProcessGameObjectRespawn(ObjectGuid::LowType spawnId)
 {
-    // Pool members are handled entirely by PoolMgr
-    if (uint32 poolId = sPoolMgr->IsPartOfAPool<GameObject>(spawnId))
+    // Same rationale as ProcessCreatureRespawn: pool management via PoolMgr is
+    // only meaningful for non-instanced maps where Spawn1Object actually spawns.
+    if (!Instanceable())
     {
-        sPoolMgr->UpdatePool<GameObject>(poolId, spawnId);
-        RemoveGORespawnTime(spawnId);
-        return;
+        if (uint32 poolId = sPoolMgr->IsPartOfAPool<GameObject>(spawnId))
+        {
+            sPoolMgr->UpdatePool<GameObject>(poolId, spawnId);
+            RemoveGORespawnTime(spawnId);
+            return;
+        }
     }
 
     GameObjectData const* data = sObjectMgr->GetGameObjectData(spawnId);
@@ -3353,10 +3363,6 @@ bool Map::CheckCollisionAndGetValidCoords(WorldObject const* source, float start
     // Prevent invalid coordinates here, position is unchanged
     if (!Acore::IsValidMapCoord(startX, startY, startZ) || !Acore::IsValidMapCoord(destX, destY, destZ))
     {
-
-        LOG_FATAL("maps", "Map::CheckCollisionAndGetValidCoords invalid coordinates startX: {}, startY: {}, startZ: {}, destX: {}, destY: {}, destZ: {}, sourceID: {}, sourceName: {}",
-            startX, startY, startZ, destX, destY, destZ);
-
         // 使用 const_cast 转换 const WorldObject* 为 WorldObject*，然后调用 ToPlayer()
         Player* player = const_cast<WorldObject*>(source)->ToPlayer();
         if (player)
@@ -3373,12 +3379,11 @@ bool Map::CheckCollisionAndGetValidCoords(WorldObject const* source, float start
             destY = safeY;
             destZ = safeZ;
 
-            LOG_FATAL("maps", "Map::CheckCollisionAndGetValidCoords invalid coordinates startX: {}, startY: {}, startZ: {}, destX: {}, destY: {}, destZ: {}, sourceID: {}, sourceName: {}",
-                startX, startY, startZ, destX, destY, destZ, source->GetEntry(), source->GetName());
             // 只有当 source 是 Player 对象时才调用 TeleportTo
             player->TeleportTo(safeMapId, safeX, safeY, safeZ, safeOrientation);
         }
-
+        LOG_FATAL("maps", "Map::CheckCollisionAndGetValidCoords invalid coordinates startX: {}, startY: {}, startZ: {}, destX: {}, destY: {}, destZ: {}, sourceID: {}, sourceName: {}",
+            startX, startY, startZ, destX, destY, destZ, source->GetEntry(), source->GetName());
         // 返回false，表示无效路径，已经将目标位置修复为安全位置
         return false;
     }

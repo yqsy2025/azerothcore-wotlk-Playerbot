@@ -2076,6 +2076,19 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     if (bot->InBattleground())
         return;
 
+    uint32 botId = bot->GetGUID().GetCounter();
+
+    // 检查距离上次刷新是否超过最小间隔
+    uint32 lastRefresh = GetEventValue(botId, "last_refresh");
+    uint32 now = time(nullptr);  // 或使用 World::GetGameTime()
+
+    if (lastRefresh > 0 && (now - lastRefresh) < 300)// 间隔300秒5分钟
+    {
+        return;  // 冷却中,跳过刷新
+    }
+
+    // 记录本次刷新时间
+    SetEventValue(botId, "last_refresh", now, 86400);  // 存储时间戳,有效期1天
     LOG_DEBUG("playerbots", "Refreshing bot {} <{}>", bot->GetGUID().ToString().c_str(), bot->GetName().c_str());
 
     PerfMonitorOperation* pmo = sPerfMonitor.start(PERF_MON_RNDBOT, "Refresh");
@@ -2085,9 +2098,8 @@ void RandomPlayerbotMgr::Refresh(Player* bot)
     bot->DurabilityRepairAll(false, 1.0f, false);
     bot->SetFullHealth();
     bot->SetPvP(sWorld->IsPvPRealm());
-    PlayerbotFactory factory(bot, bot->GetLevel(),
-                             botAI->IsTank(bot) ? ITEM_QUALITY_EPIC : 0  // 坦克用史诗，其他用默认
-    );
+    //PlayerbotFactory factory(bot, bot->GetLevel(),(botAI->IsTank(bot) || botAI->IsHeal(bot)) ? ITEM_QUALITY_LEGENDARY : 0);
+    PlayerbotFactory factory(bot, bot->GetLevel());
     factory.Refresh();
 
     if (bot->GetMaxPower(POWER_MANA) > 0)

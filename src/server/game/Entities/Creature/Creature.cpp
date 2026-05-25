@@ -708,41 +708,41 @@ void Creature::Update(uint32 diff)
     if (IsAIEnabled && TriggerJustRespawned && getDeathState() != DeathState::Dead)
     {
         TriggerJustRespawned = false;
-    }
-    // Skip for temp summons: InitializeAI already reset them, and JustRespawned would clobber state set synchronously during SUMMON.
-    if (!IsSummon())
-    {
-        if (_respawnCompatibilityMode && m_vehicleKit)
-            m_vehicleKit->Reset();
-        AI()->JustRespawned();
-    }
-    // 残血伤害翻倍系统
-    if (!_enrageChecked && GetCreatureType() != CREATURE_TYPE_CRITTER && !IsPet() && !IsTotem() && IsInCombat() && !HasAura(41924))
-   	{
-        if (GetCreatureTemplate() && GetHealthPct() <= 30.0f)
-	    {
-	        // 普通怪物：100%概率狂暴
-	        //if (GetCreatureTemplate()->rank == CREATURE_ELITE_NORMAL)
-	        //{
-	        //    AddAura(41924, this); // 伤害提升2倍(狂暴)
-	        //}
-	        // 精英怪物：10%概率狂暴
-	        if (GetCreatureTemplate()->rank == CREATURE_ELITE_ELITE && !this->IsDungeonBoss())
-	        {
-	            if (this->GetMap() && this->GetMap()->IsRaid() && (urand(1, 100) <= 20))
-	            {
-	                AddAura(41924, this); // 伤害提升2倍(狂暴)
-	            }
-	        }
-	        _enrageChecked = true; // 只执行一次
-	    }
-   		}
-	// 重置条件应该在战斗状态外
-	else if (_enrageChecked && (!IsInCombat() || isDead()))
-	{
-	    _enrageChecked = false;
-	}
 
+        // Skip for temp summons: InitializeAI already reset them, and JustRespawned would clobber state set synchronously during SUMMON.
+        if (!IsSummon())
+        {
+            if (_respawnCompatibilityMode && m_vehicleKit)
+                m_vehicleKit->Reset();
+            AI()->JustRespawned();
+        }
+        // 残血伤害翻倍系统
+        if (!_enrageChecked && GetCreatureType() != CREATURE_TYPE_CRITTER && !IsPet() && !IsTotem() && IsInCombat() && !HasAura(41924))
+        {
+            if (GetCreatureTemplate() && GetHealthPct() <= 30.0f)
+            {
+                // 普通怪物：100%概率狂暴
+                //if (GetCreatureTemplate()->rank == CREATURE_ELITE_NORMAL)
+                //{
+                //    AddAura(41924, this); // 伤害提升2倍(狂暴)
+                //}
+                // 精英怪物：10%概率狂暴
+                if (GetCreatureTemplate()->rank == CREATURE_ELITE_ELITE && !this->IsDungeonBoss())
+                {
+                    if (this->GetMap() && this->GetMap()->IsRaid() && (urand(1, 100) <= 20))
+                    {
+                        AddAura(41924, this); // 伤害提升2倍(狂暴)
+                    }
+                }
+                _enrageChecked = true; // 只执行一次
+            }
+        }
+        // 重置条件应该在战斗状态外
+        else if (_enrageChecked && (!IsInCombat() || isDead()))
+        {
+            _enrageChecked = false;
+        }
+    }
     switch (m_deathState)
     {
         case DeathState::JustRespawned:
