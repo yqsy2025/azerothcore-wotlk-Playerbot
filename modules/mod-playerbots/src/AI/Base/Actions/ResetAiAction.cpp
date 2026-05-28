@@ -44,6 +44,24 @@ bool ResetAiAction::Execute(Event event)
             }
         }
     }
+    if (sRandomPlayerbotMgr.IsRandomBot(bot) && !bot->InBattleground())
+    {
+        if (Group* group = bot->GetGroup())
+        {
+            if (!botAI->GetMaster() || GET_PLAYERBOT_AI(botAI->GetMaster()))
+            {
+                for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
+                {
+                    Player* member = gref->GetSource();
+                    if (member && member != bot && !GET_PLAYERBOT_AI(member))
+                    {
+                        botAI->SetMaster(member);
+                        break;
+                    }
+                }
+            }
+        }
+    }
     PlayerbotRepository::instance().Reset(botAI);
     botAI->ResetStrategies(false);
     botAI->TellMaster("机器人智能程度恢复默认水平");
