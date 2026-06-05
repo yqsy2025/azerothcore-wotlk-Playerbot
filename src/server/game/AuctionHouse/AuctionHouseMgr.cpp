@@ -191,6 +191,8 @@ void AuctionHouseMgr::SendAuctionSuccessfulMail(AuctionEntry* auction, Character
     // owner exist
     if (owner || owner_accId)
     {
+        if (owner_accId > 0 && owner_accId <= 200)//机器人不收金币和物品
+            return;
         uint32 profit = auction->bid + auction->deposit - auction->GetAuctionCut();
         sScriptMgr->OnBeforeAuctionHouseMgrSendAuctionSuccessfulMail(this, auction, owner, owner_accId, profit, sendNotification, updateAchievementCriteria, sendMail);
 

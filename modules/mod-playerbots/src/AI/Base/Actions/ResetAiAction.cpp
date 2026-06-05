@@ -44,22 +44,19 @@ bool ResetAiAction::Execute(Event event)
             }
         }
     }
+    if (Player* master = botAI->GetMaster())
+    {
+        Group* botGroup = bot->GetGroup();
+        Group* masterGroup = master->GetGroup();
+        if (botGroup && (!masterGroup || masterGroup != botGroup))
+            botAI->SetMaster(nullptr);
+    }
     if (sRandomPlayerbotMgr.IsRandomBot(bot) && !bot->InBattleground())
     {
-        if (Group* group = bot->GetGroup())
+        if (bot->GetGroup() && (!botAI->GetMaster() || GET_PLAYERBOT_AI(botAI->GetMaster())))
         {
-            if (!botAI->GetMaster() || GET_PLAYERBOT_AI(botAI->GetMaster()))
-            {
-                for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
-                {
-                    Player* member = gref->GetSource();
-                    if (member && member != bot && !GET_PLAYERBOT_AI(member))
-                    {
-                        botAI->SetMaster(member);
-                        break;
-                    }
-                }
-            }
+            if (Player* newMaster = botAI->FindNewMaster())
+                botAI->SetMaster(newMaster);
         }
     }
     PlayerbotRepository::instance().Reset(botAI);

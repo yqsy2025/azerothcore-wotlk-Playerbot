@@ -267,8 +267,8 @@ bool PlayerbotSecurity::CheckLevelFor(PlayerbotSecurityLevel level, bool silent,
         whispers[guid][text] = time(nullptr);
 
         // Additional protection against crashes during logout
-        if (bot->IsInWorld() && from->IsInWorld() && from->GetMap() &&
-            !from->GetMap()->IsDungeon() && !from->InBattleground())
+        if (bot->IsInWorld() && from->IsInWorld() && from->GetMap() && !from->GetMap()->IsDungeon() &&
+            !from->InBattleground())
             bot->Whisper(text, LANG_UNIVERSAL, from);
     }
 
