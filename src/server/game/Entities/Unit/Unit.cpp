@@ -12919,7 +12919,13 @@ void Unit::TriggerAurasProcOnEvent(std::list<AuraApplication*>* myProcAuras, std
     ProcEventInfo myProcEventInfo = ProcEventInfo(this, actionTarget, actionTarget, typeMaskActor, spellTypeMask, spellPhaseMask, hitMask, spell, damageInfo, healInfo);
     AuraApplicationProcContainer myAurasTriggeringProc;
     GetProcAurasTriggeredOnEvent(myAurasTriggeringProc, myProcAuras, myProcEventInfo);
-
+    // 暴击回血 2%
+    if ((hitMask & PROC_HIT_CRITICAL) && IsPlayer() && !GetOwner() && damageInfo && damageInfo->GetDamage() > 0)
+    {
+        //int32 heal = CalculatePct(GetMaxHealth(), 2);
+        int32 heal = CalculatePct(damageInfo->GetDamage(), 2);
+        ModifyHealth(heal);
+    }
     // needed for example for Cobra Strikes, pet does the attack, but aura is on owner
     if (Player* modOwner = GetSpellModOwner())
     {
