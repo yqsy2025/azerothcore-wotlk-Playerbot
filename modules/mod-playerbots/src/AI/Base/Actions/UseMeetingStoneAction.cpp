@@ -11,6 +11,7 @@
 #include "GridNotifiersImpl.h"
 #include "NearestGameObjects.h"
 #include "PlayerbotAIConfig.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "PositionValue.h"
 
@@ -36,7 +37,8 @@ bool UseMeetingStoneAction::Execute(Event event)
 
     if (bot->IsInCombat())
     {
-        botAI->TellError("I am in combat");
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "meeting_stone_in_combat", "我正在战斗", {}));
         return false;
     }
 
@@ -73,13 +75,15 @@ bool SummonAction::Execute(Event /*event*/)
 
     if (SummonUsingGos(master, bot, true) || SummonUsingNpcs(master, bot, true))
     {
-        botAI->TellMasterNoFacing("老铁!");
+        botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "hello", "老铁!", {}));
         return true;
     }
 
     if (SummonUsingGos(bot, master, true) || SummonUsingNpcs(bot, master, true))
     {
-        botAI->TellMasterNoFacing("欢迎!");
+        botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "meeting_stone_welcome", "欢迎!", {}));
         return true;
     }
 
@@ -99,7 +103,10 @@ bool SummonAction::SummonUsingGos(Player* summoner, Player* player, bool preserv
             return Teleport(summoner, player, preserveAuras);
     }
 
-    botAI->TellError(summoner == bot ? "There is no meeting stone nearby" : "There is no meeting stone near you");
+    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+        summoner == bot ? "meeting_stone_none_nearby" : "meeting_stone_none_near_you",
+        summoner == bot ? "There is no meeting stone nearby" : "There is no meeting stone near you",
+        {}));
     return false;
 }
 
@@ -119,13 +126,19 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
         {
             if (!player->HasItemCount(6948, 1, false))
             {
-                botAI->TellError(player == bot ? "我没有炉石" : "你没有炉石");
+                botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                    player == bot ? "meeting_stone_no_hearthstone_self" : "meeting_stone_no_hearthstone_you",
+                    player == bot ? "我没有炉石" : "你没有炉石",
+                    {}));
                 return false;
             }
 
             if (player->HasSpellCooldown(8690))
             {
-                botAI->TellError(player == bot ? "我炉石没冷却" : "你炉石没冷却");
+                botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                    player == bot ? "meeting_stone_hearthstone_not_ready_self" : "meeting_stone_hearthstone_not_ready_you",
+                    player == bot ? "我炉石没冷却" : "你炉石没冷却",
+                    {}));
                 return false;
             }
 
@@ -141,7 +154,10 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
         }
     }
 
-    botAI->TellError(summoner == bot ? "这附近没有旅店老板" : "您附近没有旅店老板");
+    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+        summoner == bot ? "meeting_stone_no_innkeepers_nearby" : "meeting_stone_no_innkeepers_near_you",
+        summoner == bot ? "这附近没有旅店老板" : "您附近没有旅店老板",
+        {}));
     return false;
 }
 
@@ -151,26 +167,12 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
     if (!summoner || summoner == player)
         return false;
 
-    // Do not allow teleport/summon inside battlegrounds or arenas.
-    // This prevents using the "summon" command (and any other SummonAction-based teleports)
-    // to move bots around in PvP instances.
-    if (summoner->InBattleground() || summoner->InArena())
-    {
-        botAI->TellError("你不能在战场或竞技场中召唤");
-        return false;
-    }
-
     if (player->GetVehicle())
     {
-        botAI->TellError("你在载具上时无法召唤我");
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "meeting_stone_cannot_summon_vehicle", "你在载具上时无法召唤我", {}));
         return false;
     }
-
-    //if (player->GetGroup() && player->GetGroup()->isLFGGroup())
-    //{
-    //    botAI->TellError("随机本队伍禁止召唤");
-    //    return false;
-    //}
 
     if (!summoner->IsBeingTeleported() && !player->IsBeingTeleported())
     {
@@ -189,20 +191,29 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
 
                 if (summoner->IsInCombat() && !sPlayerbotAIConfig.allowSummonInCombat)
                 {
-                    botAI->TellError("你在战斗中无法召唤我");
+                    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                        "meeting_stone_cannot_summon_master_in_combat",
+                        "你在战斗中无法召唤我",
+                        {}));
                     return false;
                 }
 
                 if (!summoner->IsAlive() && !sPlayerbotAIConfig.allowSummonWhenMasterIsDead)
                 {
-                    botAI->TellError("你已死亡无法召唤我");
+                    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                        "meeting_stone_cannot_summon_master_dead",
+                        "你已死亡无法召唤我",
+                        {}));
                     return false;
                 }
 
                 if (bot->isDead() && !bot->HasPlayerFlag(PLAYER_FLAGS_GHOST) &&
                     !sPlayerbotAIConfig.allowSummonWhenBotIsDead)
                 {
-                    botAI->TellError("我死后你无法召唤我，你需要先释放我的灵魂");
+                    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                        "meeting_stone_cannot_summon_bot_dead",
+                        "我死后你无法召唤我，你需要先释放我的灵魂",
+                        {}));
                     return false;
                 }
 
@@ -254,6 +265,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
     }
 
     if (summoner != player)
-         botAI->TellError("没有足够的空间进行召唤");
+         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+             "meeting_stone_not_enough_space", "没有足够的空间进行召唤", {}));
     return false;
 }

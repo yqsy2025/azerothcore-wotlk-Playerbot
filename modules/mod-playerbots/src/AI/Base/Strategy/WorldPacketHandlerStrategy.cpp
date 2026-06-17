@@ -15,7 +15,8 @@ void WorldPacketHandlerStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
         new TriggerNode("uninvite", { NextAction("uninvite", relevance) }));
     triggers.push_back(
         new TriggerNode("uninvite guid", { NextAction("uninvite", relevance) }));
-    triggers.push_back(new TriggerNode("group set leader", {NextAction("reset botAI", relevance)}));
+    triggers.push_back(
+        new TriggerNode("group set leader", { NextAction("reset botAI", relevance) }));
     triggers.push_back(new TriggerNode(
         "not enough money", { NextAction("tell not enough money", relevance) }));
     triggers.push_back(

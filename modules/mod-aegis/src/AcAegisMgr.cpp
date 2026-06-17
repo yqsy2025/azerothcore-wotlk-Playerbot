@@ -1007,6 +1007,9 @@ bool AcAegisMgr::IsEnabledFor(Player* player) const
     if (player->GetSession() && player->GetSession()->IsBot())//机器人禁用
         return false;
 
+    if (!player->IsAlive() || player->HasGhostAura())//死亡后禁用
+        return false;
+
     return true;
 }
 

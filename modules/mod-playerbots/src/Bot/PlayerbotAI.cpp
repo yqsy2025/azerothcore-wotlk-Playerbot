@@ -38,6 +38,7 @@
 #include "ObjectMgr.h"
 #include "PerfMonitor.h"
 #include "Player.h"
+#include "PlayerbotTextMgr.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotMgr.h"
 #include "PlayerbotGuildMgr.h"
@@ -575,7 +576,8 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
 
         if (master &&
             (master->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) || master->HasUnitState(UNIT_STATE_IN_FLIGHT) ||
-             (master->GetSession() && master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
+             (master->GetSession() &&
+              master->GetSession()->HasPermission(rbac::RBAC_PERM_INSTANT_LOGOUT))))
         {
             logout = true;
         }
@@ -916,7 +918,8 @@ void PlayerbotAI::Reset(bool full)
     {
         WorldPackets::Character::LogoutCancel data = WorldPacket(CMSG_LOGOUT_CANCEL);
         bot->GetSession()->HandleLogoutCancelOpcode(data);
-        TellMaster("Logout cancelled!");
+        TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "logout_cancel", "Logout cancelled!", {}));
     }
 
     currentEngine = engines[BOT_STATE_NON_COMBAT];
@@ -3081,6 +3084,7 @@ bool PlayerbotAI::TellMaster(std::string const text, PlayerbotSecurityLevel secu
     {
         if (sPlayerbotAIConfig.randomBotSayWithoutMaster)
             return TellMasterNoFacing(text, securityLevel);
+
         return false;
     }
     if (!TellMasterNoFacing(text, securityLevel))
@@ -3205,20 +3209,10 @@ bool PlayerbotAI::HasAura(std::string const name, Unit* unit, bool maxStack, boo
     return false;
 }
 
-bool PlayerbotAI::HasAura(uint32 spellId, Unit const* unit)
+bool PlayerbotAI::HasSpell(std::string const spellName) const
 {
-    if (!spellId || !unit)
-        return false;
-
-    return unit->HasAura(spellId);
-    // for (uint8 effect = EFFECT_0; effect <= EFFECT_2; effect++)
-    // {
-    //     AuraEffect const* aurEff = unit->GetAuraEffect(spellId, effect);
-    //     if (IsRealAura(bot, aurEff, unit))
-    //         return true;
-    // }
-
-    // return false;
+    uint32 const spellId = aiObjectContext->GetValue<uint32>("spell id", spellName)->Get();
+    return spellId && bot->HasSpell(spellId);
 }
 
 Aura* PlayerbotAI::GetAura(std::string const name, Unit* unit, bool checkIsOwner, bool checkDuration, int checkStack)
@@ -4322,7 +4316,7 @@ void PlayerbotAI::InterruptSpell()
 void PlayerbotAI::RemoveAura(std::string const name)
 {
     uint32 spellid = aiObjectContext->GetValue<uint32>("spell id", name)->Get();
-    if (spellid && HasAura(spellid, bot))
+    if (spellid && bot->HasAura(spellid))
         bot->RemoveAurasDueToSpell(spellid);
 }
 
@@ -6055,29 +6049,6 @@ void PlayerbotAI::EnchantItemT(uint32 spellid, uint8 slot)
     bot->ApplyEnchantment(pItem, PERM_ENCHANTMENT_SLOT, true);
 
     LOG_INFO("playerbots", "{}: items was enchanted successfully!", bot->GetName().c_str());
-}
-
-uint32 PlayerbotAI::GetBuffedCount(Player* player, std::string const spellname)
-{
-    uint32 bcount = 0;
-
-    if (Group* group = bot->GetGroup())
-    {
-        for (GroupReference* gref = group->GetFirstMember(); gref; gref = gref->next())
-        {
-            Player* member = gref->GetSource();
-            if (!member || !member->IsInWorld())
-                continue;
-
-            if (!member->IsInSameRaidWith(player))
-                continue;
-
-            if (HasAura(spellname, member, true))
-                bcount++;
-        }
-    }
-
-    return bcount;
 }
 
 int32 PlayerbotAI::GetNearGroupMemberCount(float dis)

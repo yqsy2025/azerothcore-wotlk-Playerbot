@@ -200,13 +200,15 @@ public:
             if (Creature* dweller = unit->ToCreature())
                 if (CreatureGroup* formation = dweller->GetFormation())
                 {
+                    if (!formation)
+                        return;
                     scheduler.CancelAll();
                     scheduler.Schedule(1s, [this, dweller, formation](TaskContext /*context*/)
                     {
                         if (!formation->IsAnyMemberAlive())
                         {
-                            if (dweller)
-                                dweller->AI()->Talk(EMOTE_SUMMON_ECK);
+                            //if (dweller)
+                                //dweller->AI()->Talk(EMOTE_SUMMON_ECK);//修复crash
 
                             instance->SummonCreature(NPC_ECK_THE_FEROCIOUS, { 1624.70f, 891.43f, 95.08f, 1.2f });
                         }

@@ -7,6 +7,7 @@
 
 #include "Event.h"
 #include "PlayerbotAIConfig.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 
 bool LeaveGroupAction::Execute(Event event)
@@ -86,7 +87,9 @@ bool LeaveGroupAction::Leave()
 
     Player* master = botAI -> GetMaster();
     if (master)
-        botAI->TellMaster("再见!", PLAYERBOT_SECURITY_TALK);
+        botAI->TellMaster(
+            PlayerbotTextMgr::instance().GetBotTextOrDefault("goodbye", "再见!", {}),
+            PLAYERBOT_SECURITY_TALK);
 
     botAI->LeaveOrDisbandGroup();
     return true;

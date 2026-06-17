@@ -267,6 +267,8 @@ bool FollowAction::isUseful()
     Unit* fTarget = nullptr;
     if (!target.empty())
         fTarget = AI_VALUE(Unit*, target);
+    else if (botAI->GetMaster() && botAI->GetMaster()->IsInWorld())
+        fTarget = botAI->GetMaster();
     else
         fTarget = AI_VALUE(Unit*, "group leader");
 

@@ -298,7 +298,6 @@ bool PossibleAddsValue::Calculate()
     {
         if (find(attackers.begin(), attackers.end(), guid) != attackers.end())
             continue;
-
         Unit* add = botAI->GetUnit(guid);
         if (!add || !add->IsInWorld() || add->IsDuringRemoveFromWorld())
             continue;
@@ -306,7 +305,6 @@ bool PossibleAddsValue::Calculate()
         if (!add->GetTarget() && !add->GetThreatMgr().GetLastVictim() && add->IsHostileTo(bot))
         {
             for (ObjectGuid const attackerGUID : attackers)
-
             {
                 Unit* attacker = botAI->GetUnit(attackerGUID);
                 if (!attacker)
