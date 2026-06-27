@@ -376,7 +376,7 @@ namespace
         return markMs && nowMs >= markMs && (nowMs - markMs) <= graceMs;
     }
 
-    bool IsServerAuthorizedAerialAura(Aura const* aura)
+/*    bool IsServerAuthorizedAerialAura(Aura const* aura)
     {
         if (!aura)
             return false;
@@ -391,6 +391,21 @@ namespace
             aura->HasEffectType(SPELL_AURA_SAFE_FALL) ||
             aura->HasEffectType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED))
             return true;
+
+        return spellInfo->HasAura(SPELL_AURA_FLY) ||
+            spellInfo->HasAura(SPELL_AURA_HOVER) ||
+            spellInfo->HasAura(SPELL_AURA_FEATHER_FALL) ||
+            spellInfo->HasAura(SPELL_AURA_SAFE_FALL) ||
+            spellInfo->HasAura(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED);
+    }*/
+    bool IsServerAuthorizedAerialAura(Aura const* aura)
+    {
+        if (!aura)
+            return false;
+
+        SpellInfo const* spellInfo = aura->GetSpellInfo();
+        if (!spellInfo)
+            return false;
 
         return spellInfo->HasAura(SPELL_AURA_FLY) ||
             spellInfo->HasAura(SPELL_AURA_HOVER) ||
@@ -442,7 +457,7 @@ namespace
         return casterGuid != player->GetGUID();
     }
 
-    bool HasExternalMobilityAura(Player* player)
+/*    bool HasExternalMobilityAura(Player* player)
     {
         if (!player)
             return false;
@@ -452,6 +467,42 @@ namespace
             (void)spellId;
 
             if (aurApp && IsExternalMobilityAura(aurApp->GetBase(), player))
+                return true;
+        }
+
+        return false;
+    }*/
+    bool HasExternalMobilityAura(Player* player)
+    {
+        if (!player)
+            return false;
+
+        for (auto const& itr : player->GetAppliedAuras())
+        {
+            AuraApplication* aurApp = itr.second;
+            if (!aurApp)
+                continue;
+
+            Aura* aura = aurApp->GetBase();
+            if (!aura)
+                continue;
+
+            SpellInfo const* spellInfo = aura->GetSpellInfo();
+            if (!spellInfo)
+                continue;
+
+            // 飞行类 Aura
+            if (spellInfo->HasAura(SPELL_AURA_FLY) ||
+                spellInfo->HasAura(SPELL_AURA_HOVER) ||
+                spellInfo->HasAura(SPELL_AURA_FEATHER_FALL) ||
+                spellInfo->HasAura(SPELL_AURA_SAFE_FALL) ||
+                spellInfo->HasAura(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED))
+            {
+                return true;
+            }
+
+            // 其它允许移动的 Aura
+            if (IsExternalMobilityAura(aura, player))
                 return true;
         }
 
@@ -1119,7 +1170,9 @@ AegisMovementContext AcAegisMgr::BuildMovementContext(Player* player, AegisPlaye
 
 bool AcAegisMgr::HasWhitelistedAura(AegisMovementContext const& movementCtx) const
 {
-    return movementCtx.hasAuthorizedAerialState || movementCtx.hasConfiguredAuraWhitelist;
+    return movementCtx.hasAuthorizedAerialState ||
+        movementCtx.hasExternalAerialAura ||
+        movementCtx.hasConfiguredAuraWhitelist;
 }
 
 bool AcAegisMgr::ShouldSkipAllMovementDetectors(AegisMovementContext const& movementCtx) const
@@ -1168,6 +1221,18 @@ void AcAegisMgr::CaptureSample(Player* player, MovementInfo const& movementInfo,
     sample.moveFlags = movementInfo.GetMovementFlags();
     sample.moveFlags2 = movementInfo.GetExtraMovementFlags();
     sample.mapId = player->GetMapId();
+    // 地图发生变化，认为是一次合法的移动边界重置避免炉石传送误判
+    bool mapChanged = false;
+    if (!ctx.samples.Empty())
+    {
+        mapChanged = (ctx.samples.Newest().mapId != sample.mapId);
+    }
+
+    if (mapChanged)
+    {
+        ctx.lastMapChangeMs = _elapsedMs;
+        ResetMovementDetectionState(ctx);
+    }
     sample.zoneId = player->GetZoneId();
     sample.areaId = player->GetAreaId();
     sample.x = movementInfo.pos.GetPositionX();
@@ -1309,6 +1374,12 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectRootBreak(Player* player,
     AegisMovementContext const& movementCtx) const
 {
     if (!player || !player->IsRooted())
+        return std::nullopt;
+
+    if (player->HasUnitState(
+        UNIT_STATE_CONFUSED |
+        UNIT_STATE_FLEEING |
+        UNIT_STATE_CHARMED))
         return std::nullopt;
 
     if (movementCtx.isBeingTeleported || movementCtx.isTaxiFlight ||

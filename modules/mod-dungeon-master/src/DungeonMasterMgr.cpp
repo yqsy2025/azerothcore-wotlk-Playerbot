@@ -2365,7 +2365,7 @@ void DungeonMasterMgr::FillCreatureLoot(Creature* creature, Session* session, bo
     }
 
     // Gold drop
-    uint32 baseGold = isBoss ? (level * 2000u) : (level * 200u);
+    uint32 baseGold = isBoss ? (level * 1000u) : (level * 100u);
     loot.gold = std::max(500u, baseGold + RandInt<uint32>(0, baseGold / 3));
 
     // Item drops
@@ -2428,9 +2428,9 @@ void DungeonMasterMgr::FillCreatureLoot(Creature* creature, Session* session, bo
         else
         {
             // Trash: 15% grey/white junk, 3% green equipment
-            if (RandInt<uint32>(1, 100) <= 15)
+            if (RandInt<uint32>(1, 100) <= 5)
                 addItem(0, 1, false);
-            if (RandInt<uint32>(1, 100) <= 3)
+            if (RandInt<uint32>(1, 100) <= 1)
                 addItem(2, 2, true);
         }
     }
