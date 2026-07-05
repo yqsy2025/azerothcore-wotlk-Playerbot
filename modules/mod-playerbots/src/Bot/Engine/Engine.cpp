@@ -114,8 +114,28 @@ void Engine::Reset()
     actionNodeFactories.creators.clear();
 }
 
+Engine::TickScope::TickScope(Engine* engine) : engine(engine) { ++engine->tickDepth; }
+
+Engine::TickScope::~TickScope()
+{
+    // When the outermost tick unwinds, apply any Init() that was deferred during it.
+    if (--engine->tickDepth == 0 && engine->initPending)
+    {
+        engine->initPending = false;
+        engine->Init();
+    }
+}
+
 void Engine::Init()
 {
+    // WL：请勿在帧循环遍历触发器/倍率系数/任务队列的过程中，对其执行删除或重建操作
+    // （例如在动作执行函数 Action::Execute、触发器校验函数 Trigger::Check 内部触发策略变更时）。
+    // 相关重建操作需延后至当前帧末尾的 TickScope 阶段统一执行。原理详见 Engine.h 头文件。
+    if (tickDepth > 0)
+    {
+        initPending = true;
+        return;
+    }
     Reset();
 
     for (std::map<std::string, Strategy*>::iterator i = strategies.begin(); i != strategies.end(); i++)
@@ -140,6 +160,9 @@ void Engine::Init()
 
 bool Engine::DoNextAction(Unit* /*unit*/, uint32 /*depth*/, bool minimal)
 {
+    // WL：所有帧循环中途调用的
+    // Init()初始化操作，均需延迟至本帧逻辑执行完毕后再运行（用于修复重入导致的野指针释放后访问漏洞）
+    TickScope tickScope(this);
     LogAction("--- AI Tick ---");
 
     if (sPlayerbotAIConfig.logValuesPerTick)
@@ -304,6 +327,7 @@ bool Engine::MultiplyAndPush(
 
 ActionResult Engine::ExecuteAction(std::string const name, Event event, std::string const qualifier)
 {
+    TickScope tickScope(this);  // WL: defer any mid-tick Init() until this unwinds (re-entrancy UAF fix)
     bool result = false;
 
     ActionNode* actionNode = CreateActionNode(name);

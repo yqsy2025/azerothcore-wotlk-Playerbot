@@ -103,6 +103,22 @@ private:
 
     void LogAction(char const* format, ...);
     void LogValues();
+    // WL：重入防护机制（单线程场景释放后复用漏洞修复）
+    // 在 DoNextAction、ProcessTriggers 仍在遍历触发器、倍率容器、任务队列时，
+    // Action::Execute()、Trigger::Check() 内部可能调用 ChangeStrategy / addStrategy /
+    // removeStrategy / removeAllStrategies / Init 等本引擎接口。
+    // Init() 会调用 Reset()，进而直接销毁当前正在遍历的容器，产生野指针，引发堆内存损坏。
+    // 该问题是机器人AI频繁崩溃的根源，单线程环境下即可复现，证明根源为函数重入，而非多线程竞态。
+    // 修复方案：若栈中存在未完成的逻辑节拍（tickDepth > 0），调用 Init() 仅标记待初始化标识后直接返回；
+    // 完整重建逻辑仅会在最外层节拍执行完毕收尾后运行一次。
+    int tickDepth = 0;
+    bool initPending = false;
+    struct TickScope
+    {
+        explicit TickScope(Engine* engine);
+        ~TickScope();
+        Engine* engine;
+    };
     ActionExecutionListeners actionExecutionListeners;
 
 protected:
