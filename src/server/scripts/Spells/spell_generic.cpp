@@ -1020,7 +1020,7 @@ class spell_gen_mod_radius_by_caster_scale : public SpellScript
     }
 };
 
-// 15600 - Hand of Justice
+// 15600 - Hand of Justice正义之手
 
 class spell_gen_proc_reduced_above_60 : public AuraScript
 {

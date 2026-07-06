@@ -1387,7 +1387,11 @@ bool MovementAction::Flee(Unit* target)
         }
     }
 
-    Unit* currentVictim = target->GetThreatMgr().GetCurrentVictim();
+    //Unit* currentVictim = target->GetThreatMgr().GetCurrentVictim();//修复crash
+    Unit* currentVictim = nullptr;
+
+    if (Creature* creature = target->ToCreature())
+        currentVictim = creature->GetThreatMgr().GetCurrentVictim();
     if (currentVictim && currentVictim == bot)  // bot is target - try to flee to tank or master
     {
         if (Group* group = bot->GetGroup())
@@ -1477,7 +1481,8 @@ bool MovementAction::Flee(Unit* target)
                 {
                     spareTarget = player;
                     spareDistance = distanceToFlee;
-                    possibleTargets.push_back(fleeTarget);
+                    //possibleTargets.push_back(fleeTarget);
+                    possibleTargets.push_back(spareTarget);
                 }
             }
 
