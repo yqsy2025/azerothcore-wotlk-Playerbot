@@ -297,60 +297,6 @@ public:
     }
 };
 
-class XilianRandomEnchantItem : public ItemScript {
-public:
-    XilianRandomEnchantItem() : ItemScript("XilianRandomEnchantItem") {}
-
-    bool OnUse(Player* player, Item* self, SpellCastTargets const& targets) override {
-        Item* item = targets.GetItemTarget();
-
-        // 如果目标物品为空，直接返回 true，避免后续操作
-        if (!item) {
-            ChatHandler(player->GetSession()).PSendSysMessage("目标物品无效，无法洗练。");
-            return true;
-        }
-
-        // 获取物品的背包槽位和插槽，确保它们有效
-        uint8 bagSlot = item->GetBagSlot();
-        uint8 slot = item->GetSlot();
-        uint8 selfbagSlot = self->GetBagSlot();
-        uint8 selfslot = self->GetSlot();
-
-        // 检查物品槽位有效性
-        if (bagSlot == INVENTORY_SLOT_BAG_0 || slot == NULL_SLOT) {
-            ChatHandler(player->GetSession()).PSendSysMessage("无法识别物品的位置，操作失败。");
-            return true;
-        }
-
-        // 直接调用 RollPossibleEnchant 方法为物品应用随机附魔
-        //RandomEnchantsPlayer().RollPossibleEnchant(player, item);
-
-        // 销毁目标物品
-        uint32 selfEntry = self->GetEntry();
-        uint32 itemEntry = item->GetEntry();  // 保存物品的Entry
-        player->DestroyItem(bagSlot, slot, true);
-
-        // 销毁洗练物品自身
-        player->DestroyItem(selfbagSlot, selfslot, true);
-
-        // 发送成功消息
-        //ChatHandler(player->GetSession()).PSendSysMessage("随机附魔属性洗练成功");
-
-        // 重新添加被洗练的物品
-        if (player->AddItem(itemEntry, 1)) {
-            // 成功添加新物品，发送确认消息
-            ChatHandler(player->GetSession()).PSendSysMessage("随机附魔属性洗练成功");
-        }
-        else {
-            // 如果添加新物品失败，发送错误消息
-            ChatHandler(player->GetSession()).PSendSysMessage("物品洗练失败，可能是背包已满。");
-        }
-
-        return true;
-    }
-};
-
 void AddRandomEnchantsScripts() {
     new RandomEnchantsPlayer();
-    new XilianRandomEnchantItem();
 }

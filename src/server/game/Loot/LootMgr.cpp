@@ -562,74 +562,77 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
 
     sScriptMgr->OnAfterLootTemplateProcess(this, tab, store, lootOwner, personal, noEmptyError, lootMode);
 
-    // 自定义全局掉落逻辑
-    //struct SpecialItem {
-    //    uint32 id;        // 物品ID
-    //    float chance;     // 掉落几率
-    //    uint32 minCount;  // 最小掉落数量
-    //    uint32 maxCount;  // 最大掉落数量
-    //};
+    //自定义全局掉落逻辑
+    struct SpecialItem {
+        uint32 id;        // 物品ID
+        float chance;     // 掉落几率
+        uint32 minCount;  // 最小掉落数量
+        uint32 maxCount;  // 最大掉落数量
+    };
 
-    //std::vector<SpecialItem> specialItems = {
-    //    {66606, 5.0f, 1, 3},  // 人品宝箱碎片，5% 的概率
-    //    {90003, 3.0f, 1, 1}   // 轮子，3% 的概率
-    //};
+    std::vector<SpecialItem> specialItems = {
+        {66606, 1.0f, 1, 2},   // 人品宝箱碎片，5% 的概率
+        {90003, 1.0f, 1, 1},   // 轮子，1% 的概率
+        {60116, 1.0f, 1, 1},   // 1号锁定石
+        {60117, 1.0f, 1, 1},   // 2号锁定石
+        {60118, 1.0f, 1, 1},   // 3号锁定石
+        {60119, 1.0f, 1, 1},   // 4号锁定石
+        {60120, 1.0f, 1, 1}    // 5号锁定石
+    };
 
-    //std::vector<SpecialItem> specialItemsH = {
-    //    {49426, 2.0f, 1, 1},  // 寒冰牌子，2% 的概率
-    //    {47241, 3.0f, 1, 3},  // 凯旋牌子，3% 的概率
-    //    //{66665, 1.0f, 1, 1},  // 人品宝箱，1% 的概率
-    //    {49294, 3.0f, 1, 1},  // 灰色史诗宝石袋，3% 的概率
-    //    {38186, 1.0f, 1, 2}   // 虚灵币，1% 的概率
-    //};
+/*    std::vector<SpecialItem> specialItemsH = {
+        {49426, 2.0f, 1, 1},  // 寒冰牌子，2% 的概率
+        {47241, 3.0f, 1, 3},  // 凯旋牌子，3% 的概率
+        //{66665, 1.0f, 1, 1},  // 人品宝箱，1% 的概率
+        {49294, 3.0f, 1, 1},  // 灰色史诗宝石袋，3% 的概率
+        {38186, 1.0f, 1, 2}   // 虚灵币，1% 的概率
+    };*/
 
-    //if (lootOwner->GetMap() && lootOwner->GetMap()->IsRaidOrHeroicDungeon() && lootSource &&
-    //    lootSource->ToCreature() && lootSource->ToCreature()->GetLevel() >= 70 &&
-    //    lootSource->ToCreature()->IsDungeonBoss())
-    //    //lootSource->ToCreature()->GetMaxHealth() > 15000)
-    //{
-    //    for (const auto& item : specialItems)
-    //    {
-    //        if (urand(1, 100) <= item.chance * 100)  // 判断是否掉落
-    //        {
-    //            // 使用适当的参数创建 LootStoreItem 对象
-    //            LootStoreItem lootItem(
-    //                item.id,            // 物品ID
-    //                0,                 // 参考ID（不引用）
-    //                item.chance * 100,  // 掉落几率（转换为百分比）
-    //                false,             // 是否需要任务（此处为 false，因为不依赖于任务）
-    //                lootMode,          // 掉落模式
-    //                0,                 // 掉落分组ID（这里假设使用0）
-    //                item.minCount,     // 最小掉落数量
-    //                item.maxCount      // 最大掉落数量
-    //            );
+    if (lootOwner->GetMap() && lootOwner->GetMap()->IsRaidOrHeroicDungeon() && lootSource &&
+        lootSource->ToCreature() && lootSource->ToCreature()->GetLevel() >= 70 && lootSource->ToCreature()->isElite())
+    {
+        for (const auto& item : specialItems)
+        {
+            if (urand(1, 100) <= item.chance * 100)  // 判断是否掉落
+            {
+                // 使用适当的参数创建 LootStoreItem 对象
+                LootStoreItem lootItem(
+                    item.id,            // 物品ID
+                    0,                 // 参考ID（不引用）
+                    item.chance * 100,  // 掉落几率（转换为百分比）
+                    false,             // 是否需要任务（此处为 false，因为不依赖于任务）
+                    lootMode,          // 掉落模式
+                    0,                 // 掉落分组ID（这里假设使用0）
+                    item.minCount,     // 最小掉落数量
+                    item.maxCount      // 最大掉落数量
+                );
 
-    //            AddItem(lootItem);  // 将物品添加到战利品中
-    //        }
-    //    }
-    //    if(lootOwner->HasAura(15007))
-    //    {
-    //        for (const auto& item : specialItemsH)
-    //        {
-    //            if (urand(1, 100) <= item.chance * 100)  // 判断是否掉落
-    //            {
-    //                // 使用适当的参数创建 LootStoreItem 对象
-    //                LootStoreItem lootItem(
-    //                    item.id,            // 物品ID
-    //                    0,                 // 参考ID（不引用）
-    //                    item.chance * 100,  // 掉落几率（转换为百分比）
-    //                    false,             // 是否需要任务（此处为 false，因为不依赖于任务）
-    //                    NEED_BEFORE_GREED,         // 掉落模式,按需分配
-    //                    0,                 // 掉落分组ID（这里假设使用0）
-    //                    item.minCount,     // 最小掉落数量
-    //                    item.maxCount      // 最大掉落数量
-    //                );
+                AddItem(lootItem);  // 将物品添加到战利品中
+            }
+        }
+/*        if(lootOwner->HasAura(15007))
+        {
+            for (const auto& item : specialItemsH)
+            {
+                if (urand(1, 100) <= item.chance * 100)  // 判断是否掉落
+                {
+                    // 使用适当的参数创建 LootStoreItem 对象
+                    LootStoreItem lootItem(
+                        item.id,            // 物品ID
+                        0,                 // 参考ID（不引用）
+                        item.chance * 100,  // 掉落几率（转换为百分比）
+                        false,             // 是否需要任务（此处为 false，因为不依赖于任务）
+                        NEED_BEFORE_GREED,         // 掉落模式,按需分配
+                        0,                 // 掉落分组ID（这里假设使用0）
+                        item.minCount,     // 最小掉落数量
+                        item.maxCount      // 最大掉落数量
+                    );
 
-    //                AddItem(lootItem);  // 将物品添加到战利品中
-    //            }
-    //        }
-    //    }
-    //}
+                    AddItem(lootItem);  // 将物品添加到战利品中
+                }
+            }
+        }*/
+    }
 
     // Setting access rights for group loot case
     Group* group = lootOwner->GetGroup();

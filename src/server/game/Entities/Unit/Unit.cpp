@@ -12924,7 +12924,9 @@ void Unit::TriggerAurasProcOnEvent(std::list<AuraApplication*>* myProcAuras, std
     {
         //int32 heal = CalculatePct(GetMaxHealth(), 2);
         int32 heal = CalculatePct(damageInfo->GetDamage(), 2);
-        ModifyHealth(heal);
+        //ModifyHealth(heal);
+        // 对施法者自身施放治疗法术 SPELL_VAMPIRIC_TOUCH_HEAL 52724吸血鬼之触，基础治疗值 = bp，强制触发(true)
+        CastCustomSpell(34696, SPELLVALUE_BASE_POINT0, heal, this, true, nullptr);
     }
     // needed for example for Cobra Strikes, pet does the attack, but aura is on owner
     if (Player* modOwner = GetSpellModOwner())
