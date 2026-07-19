@@ -64,24 +64,7 @@ public:
             player->GetSession()->SendAreaTriggerMessage("该物品无法进行洗练（仅限绿色及以上品质的武器和护甲）");
             return false;
         }
-
-        // 检查是否有附魔可以锁定（至少需要有一条属性才能锁定）
-        bool hasEnchant = false;
-        for (int i = 0; i < 5; i++)
-        {
-            if (tar->GetEnchantmentId(EnchantmentSlot(7 + i)) > 0)
-            {
-                hasEnchant = true;
-                break;
-            }
-        }
-
-        if (!hasEnchant)
-        {
-            player->GetSession()->SendAreaTriggerMessage("该物品没有任何随机属性，无法选择锁定");
-            return false;
-        }
-
+        // 即使没有随机属性，也允许进入洗练界面，没有属性时默认不锁任何条
         // 存储玩家选中的物品
         g_playerSelectedItem[player->GetGUID()] = tar->GetGUID();
 
@@ -203,6 +186,26 @@ public:
         uint32 slotEnch[5] = { 7, 8, 9, 10, 11 };
         int slotRand[5] = { -1, -1, -1, -1, -1 };
 
+        // 提前缓存锁定属性
+        std::vector<uint32> lockedEnchants;
+        for (int i = 0; i < 5; i++)
+        {
+            if (lockedSlots[i])
+            {
+                uint32 ench =
+                    item->GetEnchantmentId(
+                        EnchantmentSlot(slotEnch[i])
+                    );
+
+
+                if (ench)
+                {
+                    lockedEnchants.push_back(ench);
+                }
+            }
+        }
+
+        int lockCount = lockedEnchants.size();
         //=========================
         // 先清除未锁定槽位
         //=========================
@@ -216,112 +219,117 @@ public:
         }
 
         //=========================
-        // 第一条（100%）
+        // 根据锁定数量计算额外词条
         //=========================
-        bool hasPrev = false;
+        int targetCount = lockCount;
+        // 锁定几条，至少保留几条
+        if (targetCount < 1)
+            targetCount = 1;
 
-        if (lockedSlots[0])
+        // 第二条概率
+        double secondChance = 70;
+
+        // 第三条概率
+        double thirdChance = 40;
+
+        // 第四条概率
+        double fourthChance = 20;
+
+        // 第五条概率
+        double fifthChance = 10;
+        //=========================
+        // 根据锁定数量增加对应下一档概率
+        //=========================
+        if (lockCount == 1)
+            secondChance += 10;
+
+        if (lockCount == 2)
+            thirdChance += 10;
+
+        if (lockCount == 3)
+            fourthChance += 10;
+
+        if (lockCount == 4)
+            fifthChance += 10;
+
+        // 限制100%
+        secondChance = std::min(secondChance, 100.0);
+        thirdChance = std::min(thirdChance, 100.0);
+        fourthChance = std::min(fourthChance, 100.0);
+        fifthChance = std::min(fifthChance, 100.0);
+
+        //=========================
+        // 从当前锁定数量继续追加
+        //=========================
+        // 已锁1条，判断是否增加第2条
+        if (targetCount < 2 && rand_chance() < secondChance)
+            targetCount++;
+
+        // 已经2条，判断第3条
+        if (targetCount < 3 && rand_chance() < thirdChance)
+            targetCount++;
+
+        // 已经3条，判断第4条
+        if (targetCount < 4 && rand_chance() < fourthChance)
+            targetCount++;
+
+        // 已经4条，判断第5条
+        if (targetCount < 5 && rand_chance() < fifthChance)
+            targetCount++;
+
+        // 最少保留锁定数量
+        if (targetCount < lockCount)
+            targetCount = lockCount;
+
+        if (targetCount > 5)
+            targetCount = 5;
+
+        // 生成未锁定属性
+        int newCount = targetCount - lockCount;
+        std::vector<int> newEnchants;
+        int retry = 0;
+
+        while (newCount > 0 && retry < 50)
         {
-            hasPrev = (item->GetEnchantmentId(EnchantmentSlot(slotEnch[0])) != 0);
-        }
-        else
-        {
-            slotRand[0] = getRandEnchantment(item);
-            hasPrev = (slotRand[0] != -1);
-        }
+            int ench =
+                getRandEnchantment(item);
 
-        //=========================
-        // 第二条
-        //=========================
-        if (hasPrev)
-        {
-            if (lockedSlots[1])
+            if (ench > 0)
             {
-                hasPrev = (item->GetEnchantmentId(EnchantmentSlot(slotEnch[1])) != 0);
+                newEnchants.push_back(ench);
+                newCount--;
             }
-            else
-            {
-                if (rand_chance() < (itemLevel >= 100 ? 100.0f : 60.0f))
-                    slotRand[1] = getRandEnchantment(item);
-
-                hasPrev = (slotRand[1] != -1);
-            }
-        }
-        else
-            hasPrev = false;
-
-        //=========================
-        // 第三条
-        //=========================
-        if (hasPrev)
-        {
-            if (lockedSlots[2])
-            {
-                hasPrev = (item->GetEnchantmentId(EnchantmentSlot(slotEnch[2])) != 0);
-            }
-            else
-            {
-                if (rand_chance() < (itemLevel >= 100 ? 100.0f : 30.0f))
-                    slotRand[2] = getRandEnchantment(item);
-
-                hasPrev = (slotRand[2] != -1);
-            }
-        }
-        else
-            hasPrev = false;
-
-        //=========================
-        // 第四条
-        //=========================
-        if (itemLevel >= 100 && hasPrev)
-        {
-            if (lockedSlots[3])
-            {
-                hasPrev = (item->GetEnchantmentId(EnchantmentSlot(slotEnch[3])) != 0);
-            }
-            else
-            {
-                if (rand_chance() < 20.0f)
-                    slotRand[3] = getRandEnchantment(item);
-
-                hasPrev = (slotRand[3] != -1);
-            }
-        }
-        else
-            hasPrev = false;
-
-        //=========================
-        // 第五条
-        //=========================
-        if (itemLevel >= 100 && hasPrev)
-        {
-            if (!lockedSlots[4])
-            {
-                if (rand_chance() < 10.0f)
-                    slotRand[4] = getRandEnchantment(item);
-            }
+            retry++;
         }
 
-        //=========================
-        // 应用新的随机属性
-        //=========================
-        for (int i = 0; i < 5; ++i)
+        // 重新组合属性
+        std::vector<int> finalEnchants;
+        // 加入锁定属性
+        for (uint32 ench : lockedEnchants)
         {
-            if (lockedSlots[i])
-                continue;
+            finalEnchants.push_back(ench);
+        }
 
-            if (slotRand[i] == -1)
-                continue;
-
-            player->ApplyEnchantment(item, EnchantmentSlot(slotEnch[i]), false);
-
-            item->SetEnchantment(
+        // 加入新属性
+        for (int ench : newEnchants)
+        {
+            finalEnchants.push_back(ench);
+        }
+        // 重新写入槽位
+        for (int i = 0;i < 5;i++)
+        {
+            player->ApplyEnchantment(
+                item,
                 EnchantmentSlot(slotEnch[i]),
-                slotRand[i],
-                0,
-                0);
+                false
+            );
+            item->SetEnchantment(EnchantmentSlot(slotEnch[i]),0,0,0);
+        }
 
-            player->ApplyEnchantment(item, EnchantmentSlot(slotEnch[i]), true);
+        for (size_t i = 0; i < finalEnchants.size() && i < 5; i++)
+        {
+            item->SetEnchantment(EnchantmentSlot(slotEnch[i]),finalEnchants[i],0,0);
+            player->ApplyEnchantment(item,EnchantmentSlot(slotEnch[i]),true);
         }
 
         //=========================
