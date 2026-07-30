@@ -1,5 +1,11 @@
-#ifndef _PLAYERBOT_RAIDAQ20TRIGGERCONTEXT_H
-#define _PLAYERBOT_RAIDAQ20TRIGGERCONTEXT_H
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
+#ifndef PLAYERBOTS_AQ20TRIGGERCONTEXT_H
+#define PLAYERBOTS_AQ20TRIGGERCONTEXT_H
 
 #include "NamedObjectContext.h"
 #include "Aq20Triggers.h"

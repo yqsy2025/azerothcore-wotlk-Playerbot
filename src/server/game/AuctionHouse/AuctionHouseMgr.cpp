@@ -191,8 +191,6 @@ void AuctionHouseMgr::SendAuctionSuccessfulMail(AuctionEntry* auction, Character
     // owner exist
     if (owner || owner_accId)
     {
-        if (owner_accId > 0 && owner_accId <= 200)//机器人不收金币和物品
-            return;
         uint32 profit = auction->bid + auction->deposit - auction->GetAuctionCut();
         sScriptMgr->OnBeforeAuctionHouseMgrSendAuctionSuccessfulMail(this, auction, owner, owner_accId, profit, sendNotification, updateAchievementCriteria, sendMail);
 
@@ -218,9 +216,11 @@ void AuctionHouseMgr::SendAuctionSuccessfulMail(AuctionEntry* auction, Character
             .AddMoney(profit)
             .SendMailTo(trans, MailReceiver(owner, auction->owner.GetCounter()), auction, MAIL_CHECK_MASK_COPIED, sWorld->getIntConfig(CONFIG_MAIL_DELIVERY_DELAY));
 
-        LOG_INFO("entities.player.auctionhouse", "AuctionHouse: Auction #{} sold: Seller {} (GUID: {}), Buyer: {} (GUID: {}), Item (Entry: {}) x{}, Sale Price: {} copper, Profit: {} copper (cut: {} copper)",
-            auction->Id, owner ? owner->GetName() : "offline", auction->owner.GetCounter(),
-            auction->bidder.GetCounter(), auction->item_template, auction->itemCount,
+        CharacterCacheEntry const* sellerCache = sCharacterCache->GetCharacterCacheByGuid(auction->owner);
+        CharacterCacheEntry const* bidderCache = sCharacterCache->GetCharacterCacheByGuid(auction->bidder);
+        LOG_INFO("entities.player.auctionhouse", "AuctionHouse: Auction #{} sold: Seller {} (AccountID: {}, GUID: {}), Buyer: {} (AccountID: {}, GUID: {}), Item (Entry: {}) x{}, Sale Price: {} copper, Profit: {} copper (cut: {} copper)",
+            auction->Id, sellerCache ? sellerCache->Name : (owner ? owner->GetName() : "offline"), sellerCache ? sellerCache->AccountId : owner_accId, auction->owner.GetCounter(),
+            bidderCache ? bidderCache->Name : "unknown", bidderCache ? bidderCache->AccountId : 0, auction->bidder.GetCounter(), auction->item_template, auction->itemCount,
             auction->bid, profit, auction->GetAuctionCut());
 
         if (auction->bid >= 500 * GOLD)

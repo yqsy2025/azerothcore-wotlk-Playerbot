@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "TradeStatusAction.h"
@@ -30,7 +31,7 @@ bool TradeStatusAction::Execute(Event event)
     if (trader != master && !traderBotAI && (!bot->GetGroup() || !bot->GetGroup()->IsMember(trader->GetGUID())))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "trade_busy_now", "我正忙", {}),
+                         "trade_busy_now", "I'm kind of busy now", {}),
                      LANG_UNIVERSAL, trader);
         return false;
     }
@@ -38,7 +39,7 @@ bool TradeStatusAction::Execute(Event event)
     if (sPlayerbotAIConfig.enableRandomBotTrading == 0 && (sRandomPlayerbotMgr.IsRandomBot(bot)|| sRandomPlayerbotMgr.IsAddclassBot(bot)))
     {
         bot->Whisper(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                         "trade_disabled", "交易取消", {}),
+                         "trade_disabled", "Trading is disabled", {}),
                      LANG_UNIVERSAL, trader);
         return false;
     }
@@ -159,11 +160,6 @@ void TradeStatusAction::BeginTrade()
 bool TradeStatusAction::CheckTrade()
 {
     Player* trader = bot->GetTrader();
-    if (!bot->GetTradeData() || !trader || !trader->GetTradeData() || sRandomPlayerbotMgr.IsRandomBot(bot))
-    {
-        // 禁止随机机器人交易
-        return false;
-    }
     if (!bot->GetTradeData() || !trader || !trader->GetTradeData())
         return false;
 
@@ -192,12 +188,12 @@ bool TradeStatusAction::CheckTrade()
                 botAI->HasRealPlayerMaster())
                 botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     "trade_thank_you_player",
-                    "谢谢你 %player",
+                    "Thank you %player",
                     {{"%player", chat->FormatWorldobject(bot->GetTrader())}}));
             else
                 bot->Say(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                              "trade_thank_you_player",
-                             "谢谢你 %player",
+                             "Thank you %player",
                              {{"%player", chat->FormatWorldobject(bot->GetTrader())}}),
                          (bot->GetTeamId() == TEAM_ALLIANCE ? LANG_COMMON : LANG_ORCISH));
         }
@@ -210,9 +206,6 @@ bool TradeStatusAction::CheckTrade()
     uint32 accountId = bot->GetSession()->GetAccountId();
     if (!sPlayerbotAIConfig.IsInRandomAccountList(accountId))
     {
-        // 禁止有公会的机器人交易
-        if (bot->GetGuildId())
-            return false;
         int32 botItemsMoney = CalculateCost(bot, true);
         int32 botMoney = bot->GetTradeData()->GetMoney() + botItemsMoney;
         int32 playerItemsMoney = CalculateCost(trader, false);

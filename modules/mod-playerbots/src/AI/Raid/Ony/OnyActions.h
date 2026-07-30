@@ -1,6 +1,12 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 // RaidOnyxiaActions.h
-#ifndef _PLAYERBOT_RAIDONYXIAACTIONS_H_
-#define _PLAYERBOT_RAIDONYXIAACTIONS_H_
+#ifndef PLAYERBOTS_ONYACTIONS_H
+#define PLAYERBOTS_ONYACTIONS_H
 
 #include "AttackAction.h"
 #include "GenericSpellActions.h"

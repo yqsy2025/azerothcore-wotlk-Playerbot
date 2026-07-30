@@ -1,6 +1,12 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 // OnyxiaTriggers.h
-#ifndef _PLAYERBOT_ONYXIATRIGGERS_H_
-#define _PLAYERBOT_ONYXIATRIGGERS_H_
+#ifndef PLAYERBOTS_ONYTRIGGERS_H
+#define PLAYERBOTS_ONYTRIGGERS_H
 
 #include "PlayerbotAI.h"
 #include "Trigger.h"

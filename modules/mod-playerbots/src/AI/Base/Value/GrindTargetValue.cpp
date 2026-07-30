@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "GrindTargetValue.h"
@@ -99,8 +100,8 @@ Unit* GrindTargetValue::FindTargetForGrinding(uint32 assistCount)
             if (CreatureTemplate const* CreatureTemplate = creature->GetCreatureTemplate())
                 if (CreatureTemplate->rank > CREATURE_ELITE_NORMAL && !AI_VALUE(bool, "can fight elite"))
                     continue;
-        //禁用视野检查
-        if (!bot->IsWithinLOSInMap(unit) && !bot->InArena())
+
+        if (!bot->IsWithinLOSInMap(unit))
         {
             continue;
         }
@@ -182,7 +183,7 @@ bool GrindTargetValue::needForQuest(Unit* target)
                     int required = questTemplate->RequiredNpcOrGoCount[j];
                     int available = questStatus->CreatureOrGOCount[j];
 
-                    if (required && available < required && target->GetEntry() == entry)
+                    if (required && available < required && target->GetEntry() == uint32(entry))
                         return true;
                 }
             }

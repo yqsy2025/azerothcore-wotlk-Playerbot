@@ -1,3 +1,9 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "NaxxActions.h"
 
 #include "ObjectGuid.h"
@@ -47,7 +53,7 @@ bool RazuviousUseObedienceCrystalAction::Execute(Event /*event*/)
         {
             // taunt
             bool tauntUseful = true;
-            if (forceObedience->GetDuration() <= (duration_time - 5000))
+            if (forceObedience->GetDuration() <= int32(duration_time - 5000))
             {
                 Unit* victim = target->GetVictim();
                 if (victim && victim->HasAura(SPELL_BONE_BARRIER))
@@ -57,7 +63,7 @@ bool RazuviousUseObedienceCrystalAction::Execute(Event /*event*/)
                     tauntUseful = false;
 
             }
-            if (forceObedience->GetDuration() >= (duration_time - 500))
+            if (forceObedience->GetDuration() >= int32(duration_time - 500))
                 tauntUseful = false;
 
             if (tauntUseful && !charm->HasSpellCooldown(29060))

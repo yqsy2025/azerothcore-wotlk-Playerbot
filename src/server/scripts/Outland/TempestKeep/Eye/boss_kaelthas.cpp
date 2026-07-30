@@ -1087,7 +1087,7 @@ class spell_kaelthas_nether_beam : public SpellScript
         {
             if (Unit* target = ref->GetVictim())
             {
-            	if (target && target->IsPlayer())
+                if (target->IsPlayer())
                     targetList.push_back(target);
             }
         }

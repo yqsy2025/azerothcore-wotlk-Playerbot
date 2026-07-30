@@ -1,5 +1,11 @@
-#ifndef _PLAYERBOT_RAIDSTRATEGYCONTEXT_H_
-#define _PLAYERBOT_RAIDSTRATEGYCONTEXT_H_
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
+#ifndef PLAYERBOTS_RAIDSTRATEGYCONTEXT_H
+#define PLAYERBOTS_RAIDSTRATEGYCONTEXT_H
 
 #include "Strategy.h"
 #include "Aq20Strategy.h"
@@ -20,6 +26,7 @@
 #include "UldStrategy.h"
 #include "OnyStrategy.h"
 #include "ICCStrategy.h"
+#include "RSStrategy.h"
 
 class RaidStrategyContext : public NamedObjectContext<Strategy>
 {
@@ -44,6 +51,7 @@ public:
         creators["ulduar"] = &RaidStrategyContext::ulduar;
         creators["onyxia"] = &RaidStrategyContext::onyxia;
         creators["icc"] = &RaidStrategyContext::icc;
+        creators["rs"] = &RaidStrategyContext::rs;
     }
 
 private:
@@ -65,6 +73,7 @@ private:
     static Strategy* onyxia(PlayerbotAI* botAI) { return new RaidOnyxiaStrategy(botAI); }
     static Strategy* ulduar(PlayerbotAI* botAI) { return new RaidUlduarStrategy(botAI); }
     static Strategy* icc(PlayerbotAI* botAI) { return new RaidIccStrategy(botAI); }
+    static Strategy* rs(PlayerbotAI* botAI) { return new RaidRsStrategy(botAI); }
 };
 
 #endif

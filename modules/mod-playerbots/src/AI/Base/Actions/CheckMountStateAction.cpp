@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "CheckMountStateAction.h"
@@ -296,8 +297,7 @@ bool CheckMountStateAction::TryForms(Player* master, int32 masterMountType, int3
     else if
         ((masterInShapeshiftForm == FORM_TRAVEL && botInShapeshiftForm == FORM_TRAVEL) ||
         ((masterInShapeshiftForm == FORM_FLIGHT || (masterMountType == 1 && masterSpeed == 149)) && botInShapeshiftForm == FORM_FLIGHT) ||
-             ((masterInShapeshiftForm == FORM_FLIGHT_EPIC || (masterMountType == 1 && masterSpeed >= 279)) &&
-              botInShapeshiftForm == FORM_FLIGHT_EPIC))
+        ((masterInShapeshiftForm == FORM_FLIGHT_EPIC || (masterMountType == 1 && masterSpeed >= 279)) && botInShapeshiftForm == FORM_FLIGHT_EPIC))
         return true;
 
     // Check if master is in Travel Form and bot can do the same
@@ -323,7 +323,7 @@ bool CheckMountStateAction::TryForms(Player* master, int32 masterMountType, int3
     // Check if master is in Swift Flight Form or has an epic flying mount and bot can swift flight form
     if (botAI->CanCastSpell(SPELL_SWIFT_FLIGHT_FORM, bot, true) &&
         ((masterInShapeshiftForm == FORM_FLIGHT_EPIC && botInShapeshiftForm != FORM_FLIGHT_EPIC) ||
-         (masterMountType == 1 && masterSpeed >= 279)))
+        (masterMountType == 1 && masterSpeed >= 279)))
     {
         botAI->CastSpell(SPELL_SWIFT_FLIGHT_FORM, bot);
 
@@ -488,8 +488,9 @@ bool CheckMountStateAction::ShouldFollowMasterMountState(Player* master, bool no
 
 bool CheckMountStateAction::ShouldDismountForMaster(Player* master) const
 {
-    bool isMasterMounted = master->IsMounted() || (masterInShapeshiftForm == FORM_FLIGHT || masterInShapeshiftForm == FORM_FLIGHT_EPIC ||
-                                masterInShapeshiftForm == FORM_TRAVEL);
+    bool isMasterMounted = master->IsMounted() || (masterInShapeshiftForm == FORM_FLIGHT ||
+                                                   masterInShapeshiftForm == FORM_FLIGHT_EPIC ||
+                                                   masterInShapeshiftForm == FORM_TRAVEL);
     return !isMasterMounted && bot->IsMounted();
 }
 

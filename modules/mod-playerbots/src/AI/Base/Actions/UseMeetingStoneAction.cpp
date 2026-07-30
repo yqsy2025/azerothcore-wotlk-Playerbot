@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "UseMeetingStoneAction.h"
@@ -221,7 +222,9 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                     sPlayerbotAIConfig.reviveBotWhenSummoned == 2 ||
                     (sPlayerbotAIConfig.reviveBotWhenSummoned == 1 && !summoner->IsInCombat() && summoner->IsAlive());
 
-                if (bot->isDead() && revive && summoner->getClass() != CLASS_HUNTER)
+                if (bot->isDead() && revive &&
+                    !(summoner->getClass() == CLASS_HUNTER &&
+                      summoner->GetMap() && summoner->GetMap()->IsRaidOrHeroicDungeon()))
                 {
                     bot->ResurrectPlayer(1.0f, false);
                     bot->SpawnCorpseBones();

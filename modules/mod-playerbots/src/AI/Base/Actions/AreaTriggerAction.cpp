@@ -1,12 +1,14 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "AreaTriggerAction.h"
 
 #include "Event.h"
 #include "LastMovementValue.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "Transport.h"
 
@@ -36,7 +38,8 @@ bool ReachAreaTriggerAction::Execute(Event event)
 
     if (bot->GetMapId() != at->map)
     {
-        //botAI->TellError("我不跟着你了，太远了");
+        botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+            "area_trigger_follow_too_far_error", "I won't follow: too far away", {}));
         return true;
     }
 
@@ -51,11 +54,8 @@ bool ReachAreaTriggerAction::Execute(Event event)
 
     float distance = bot->GetDistance(at->x, at->y, at->z);
     float delay = 1000.0f * distance / bot->GetSpeed(MOVE_RUN) + sPlayerbotAIConfig.reactDelay;
-    botAI->TellError("等我,有点远");//传送到主人
-    if (botAI->HasRealPlayerMaster() && botAI->GetMaster() &&
-        !bot->IsBeingTeleported() && !botAI->GetMaster()->IsBeingTeleported() && bot->GetGroup() && !bot->GetMap()->IsDungeon())  // 随机本不出来
-            bot->TeleportTo(botAI->GetMaster()->GetMapId(), botAI->GetMaster()->GetPositionX(),
-                        botAI->GetMaster()->GetPositionY(), botAI->GetMaster()->GetPositionZ(), 0);
+    botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+        "area_trigger_wait_for_me", "Wait for me", {}));
     botAI->SetNextCheckDelay(delay);
     context->GetValue<LastMovement&>("last area trigger")->Get().lastAreaTrigger = triggerId;
 
@@ -80,6 +80,6 @@ bool AreaTriggerAction::Execute(Event /*event*/)
     p.rpos(0);
     bot->GetSession()->HandleAreaTriggerOpcode(p);
 
-    botAI->TellMaster("你好,我赶来了,你跑得太快了!");
+    botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault("hello", "Hello", {}));
     return true;
 }

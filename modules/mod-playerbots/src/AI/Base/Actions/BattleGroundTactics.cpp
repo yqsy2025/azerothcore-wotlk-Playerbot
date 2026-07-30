@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "BattleGroundTactics.h"
@@ -1368,7 +1369,7 @@ std::string const BGTactics::HandleConsoleCommandPrivate(WorldSession* session, 
         uint32 max = vPaths->size() - 1;
         if (num >= 0)  // num specified or found
         {
-            if (num > max)
+            if (uint32(num) > max)
                 return fmt::format("Path {} of range of 0 - {}", num, max);
             min = num;
             max = num;
@@ -2177,7 +2178,7 @@ bool BGTactics::selectObjective(bool reset)
 
             uint8 defendersProhab = 3;  // Default balanced
 
-            switch (strategy)
+            switch (static_cast<uint8>(strategy))
             {
                 case 0:
                 case 1:
@@ -3324,7 +3325,7 @@ bool BGTactics::selectObjectiveWp(std::vector<BattleBotPath*> const& vPaths)
 
         // don't pick path where bot is already closest to the paths closest point to target (it means path cant lead it
         // anywhere) don't pick path where closest point is too far away
-        if (closestPointIndex == (reverse ? 0 : path->size() - 1) || closestPointDistToBot > botDistanceLimit)
+        if (closestPointIndex == int(reverse ? 0 : path->size() - 1) || closestPointDistToBot > botDistanceLimit)
             continue;
 
         // creates a score based on dist-to-bot and dist-to-destination, where lower is better, and dist-to-bot is more
@@ -4287,35 +4288,24 @@ bool ArenaTactics::Execute(Event /*event*/)
     Unit* target = bot->GetVictim();
     if (target)
     {
-        bool losBlocked = !bot->IsWithinLOSInMap(target) || fabs(bot->GetPositionZ() - target->GetPositionZ()) > 6.0f;
+        bool losBlocked = !bot->IsWithinLOSInMap(target) || fabs(bot->GetPositionZ() - target->GetPositionZ()) > 5.0f;
 
         if (losBlocked)
         {
-            if (bot->IsNonMeleeSpellCast(false, false, false, true, false) ||
-                bot->IsNonMeleeSpellCast(true, false, false, true, false) || bot->IsMovementPreventedByCasting()
-                || !bot->isMoving())
+            PathGenerator path(bot);
+            path.CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
+
+            if (path.GetPathType() != PATHFIND_NOPATH)
             {
-                bot->CastStop();
-                bot->InterruptNonMeleeSpells(false);
-                bot->InterruptNonMeleeSpells(true);
-                bot->Attack(target, false);
-            }
-            MoveToLOS(target, true);
-            //return MoveToLOS(target, true);  // 移动到远程能看到的第一个点
-            //PathGenerator path(bot);
-            //path.CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
-
-            //if (path.GetPathType() != PATHFIND_NOPATH)
-            //{
                 // If you are casting a spell and lost your target due to LoS, interrupt the cast and move
-                //if (bot->IsNonMeleeSpellCast(false, true, true, false, true))
-                //    bot->InterruptNonMeleeSpells(true);
+                if (bot->IsNonMeleeSpellCast(false, true, true, false, true))
+                    bot->InterruptNonMeleeSpells(true);
 
-                //float x, y, z;
-                //target->GetPosition(x, y, z);
-                //botAI->TellMasterNoFacing("Repositioning to exit the LoS target!");
-                //return MoveToLOS(target, true); //移动到远程能看到的第一个点
-            //}
+                float x, y, z;
+                target->GetPosition(x, y, z);
+                botAI->TellMasterNoFacing("Repositioning to exit the LoS target!");
+                return MoveTo(target->GetMapId(), x + frand(-1, +1), y + frand(-1, +1), z, false, true);
+            }
         }
     }
 

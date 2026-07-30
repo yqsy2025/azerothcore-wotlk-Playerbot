@@ -1,3 +1,9 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
+
 #include "StatsCollector.h"
 
 #include "DBCStores.h"
@@ -34,7 +40,7 @@ void StatsCollector::CollectItemStats(ItemTemplate const* proto)
     }
     stats[STATS_TYPE_ARMOR] += proto->Armor;
     stats[STATS_TYPE_BLOCK_VALUE] += proto->Block;
-    for (int i = 0; i < proto->StatsCount; i++)
+    for (uint32 i = 0; i < proto->StatsCount; i++)
     {
         const _ItemStat& stat = proto->ItemStat[i];
         const int32& val = stat.ItemStatValue;

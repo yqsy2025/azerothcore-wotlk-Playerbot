@@ -1,3 +1,8 @@
+/*
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
+ */
 
 #include "UldActions.h"
 
@@ -104,7 +109,7 @@ bool FlameLeviathanVehicleAction::MoveAvoidChasing(Unit* target)
         return false;
     if (avoidChaseIdx == -1)
     {
-        for (int i = 0; i < corners.size(); i++)
+        for (uint32 i = 0; i < corners.size(); i++)
         {
             if (bot->GetExactDist(corners[i]) > target->GetExactDist(corners[i]))
                 continue;
@@ -2633,7 +2638,7 @@ bool YoggSaronMarkTargetAction::Execute(Event /*event*/)
             if ((unit->GetEntry() == NPC_IMMORTAL_GUARDIAN || unit->GetEntry() == NPC_MARKED_IMMORTAL_GUARDIAN) &&
                 unit->GetHealthPct() > 10)
             {
-                if (unit->GetHealth() < lowestHealth)
+                if (unit->GetHealth() < uint32(lowestHealth))
                 {
                     lowestHealth = unit->GetHealth();
                     lowestHealthUnit = unit;

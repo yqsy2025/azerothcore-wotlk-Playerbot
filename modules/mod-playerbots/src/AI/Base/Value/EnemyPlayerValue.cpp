@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "EnemyPlayerValue.h"
@@ -22,8 +23,7 @@ bool NearestEnemyPlayersValue::AcceptUnit(Unit* unit)
         !sPlayerbotAIConfig.IsPvpProhibited(enemy->GetZoneId(), enemy->GetAreaId()) &&
         !enemy->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NON_ATTACKABLE_2) &&
         ((inCannon || !enemy->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE))) &&
-        /*!enemy->HasStealthAura() && !enemy->HasInvisibilityAura()*/
-        (bot->InArena() || enemy->CanSeeOrDetect(bot)) &&  // 竞技场视野可见
+        /*!enemy->HasStealthAura() && !enemy->HasInvisibilityAura()*/ enemy->CanSeeOrDetect(bot) &&
         !(enemy->HasSpiritOfRedemptionAura()))
     {
         // If with master, only attack if master is PvP flagged
@@ -67,18 +67,6 @@ Unit* EnemyPlayerValue::Calculate()
             (bot->GetTeamId() == TEAM_ALLIANCE && pTarget->HasAura(23335)))
             return pTarget;
 
-        if ((bot->InArena() || bot->InBattleground()) && //在没有敌对治疗的前提下
-            !botAI->GetAiObjectContext()->GetValue<Unit*>("enemy healer target")->Get())
-        {
-            if (pTarget->getClass() == CLASS_HUNTER)
-                return pTarget;  // 优先攻击目标
-            if (pTarget->getClass() == CLASS_MAGE)
-                return pTarget;
-            if (pTarget->getClass() == CLASS_WARLOCK)
-                return pTarget;
-            if (pTarget->getClass() == CLASS_ROGUE)
-                return pTarget;
-        }
         targets.push_back(pTarget);
     }
 
@@ -126,8 +114,8 @@ Unit* EnemyPlayerValue::Calculate()
                                                                                                       : 20.0f;
         if (!bot->IsWithinDist(pTarget, aggroDistance))
             continue;
-        // 竞技场禁用视野检查
-        if ((bot->InArena() || bot->IsWithinLOSInMap(pTarget)) &&
+
+        if (bot->IsWithinLOSInMap(pTarget) &&
             (controllingCannon || (fabs(bot->GetPositionZ() - pTarget->GetPositionZ()) < 30.0f)))
             return pTarget;
     }
@@ -148,9 +136,7 @@ Unit* EnemyPlayerValue::Calculate()
 
                 if (Unit* pAttacker = pMember->getAttackerForHelper())
                     if (pAttacker->IsPlayer() && bot->IsWithinDist(pAttacker, maxAggroDistance * 2.0f) &&
-                        //竞技场禁用视野检查
-                        (bot->InArena() || bot->IsWithinLOSInMap(pAttacker)) &&
-                        pAttacker != pVictim && (pAttacker->CanSeeOrDetect(bot) || bot->InArena()))
+                        bot->IsWithinLOSInMap(pAttacker) && pAttacker != pVictim && pAttacker->CanSeeOrDetect(bot))
                         return pAttacker;
             }
         }

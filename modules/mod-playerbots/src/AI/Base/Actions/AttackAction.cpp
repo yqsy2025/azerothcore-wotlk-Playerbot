@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license, you may redistribute it
- * and/or modify it under version 3 of the License, or (at your option), any later version.
+ * This file is part of the mod-playerbots module for AzerothCore. See AUTHORS file for Copyright
+ * information; released under GNU GPL v2 license, redistribute/modify under version 2 of the License,
+ * or (at your option) any later version.
  */
 
 #include "AttackAction.h"
@@ -177,17 +178,6 @@ bool AttackAction::Attack(Unit* target, bool /*with_pet*/ /*true*/)
     context->GetValue<Unit*>("old target")->Set(oldTarget);
     context->GetValue<Unit*>("current target")->Set(target);
     context->GetValue<LootObjectStack*>("available loot")->Get()->Add(guid);
-    
-    // 竞技场中视野不可见则直接tele
-    //Battleground* bg = bot->GetBattleground();
-    bool losed = !bot->IsWithinLOSInMap(target) && fabs(bot->GetPositionZ() - target->GetPositionZ()) > 3.0f;
-    //Unit* attacktarget = bot->GetVictim();
-    if (target->GetMapId() == bot->GetMapId() && losed && 
-        bot->InArena() && !bot->IsBeingTeleported() && bot->GetZoneId() != 4406)//禁用勇气竞技场传送(有电梯那个)
-        bot->TeleportTo(target->GetMapId(), target->GetPositionX(), target->GetPositionY(),
-                        target->GetPositionZ(), 0);
-     //bot->TeleportTo(bot->GetMapId(), lastMovement.lastMoveToX, lastMovement.lastMoveToY, lastMovement.lastMoveToZ,
-     //0);
 
     LastMovement& lastMovement = AI_VALUE(LastMovement&, "last movement");
     bool moveControlled = bot->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_CONTROLLED) != NULL_MOTION_TYPE;

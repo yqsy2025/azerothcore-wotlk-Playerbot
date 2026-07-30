@@ -266,6 +266,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
     AllowActivity();
 
+    // If we get attacked, drop the pending delay so the engine can switch to combat.
+    if (nextAICheckDelay && bot->IsInCombat() && currentEngine != engines[BOT_STATE_COMBAT])
+        nextAICheckDelay = 0;
+
     if (!CanUpdateAI())
         return;
 
@@ -415,12 +419,10 @@ void PlayerbotAI::UpdateAIGroupMaster()
 
     Group* group = bot->GetGroup();
 
-    bool IsRandomBot = sRandomPlayerbotMgr.IsRandomBot(bot);
-
     // If bot is not in group verify that for is RandomBot before clearing  master and resetting.
     if (!group)
     {
-        if (master && IsRandomBot)
+        if (master && sRandomPlayerbotMgr.IsRandomBot(bot))
         {
             SetMaster(nullptr);
             Reset(true);
@@ -431,7 +433,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
 
     // Bot in BG, but master no longer part of a group: release master
     // Exclude alt and addclass bots as they rely on current (real player) master, security-wise.
-    if (bot->InBattleground() && IsRandomBot && master)
+    if (bot->InBattleground() && sRandomPlayerbotMgr.IsRandomBot(bot) && master && !master->GetGroup())
         SetMaster(nullptr);
     // 第三部分：寻找新主人
     if (group && !bot->InBattleground())
@@ -441,7 +443,7 @@ void PlayerbotAI::UpdateAIGroupMaster()
             bot->RemoveAura(41105);
         if (bot && bot->GetVictim() && bot->IsInCombatWith(bot->GetVictim()))  // 防御光环和仇恨之怒
         {
-            if (botAI->IsMainTank(bot, false) && !bot->HasAura(36886))
+            if (botAI->IsMainTank(bot) && !bot->HasAura(36886))
                 bot->AddAura(36886, bot);
             if ((bot->GetHealth() < bot->GetMaxHealth() * 0.5f) && botAI->IsTank(bot, true) && !bot->HasAura(41105))
                 bot->AddAura(41105, bot);
@@ -1683,7 +1685,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     static const std::vector<std::string> allInstanceStrategies =
     {
         "aq20", "blacktemple", "bwl", "gruulslair", "hyjal", "icc", "karazhan",
-        "magtheridon", "moltencore", "naxx", "onyxia", "ssc", "tbc-ac", "tempestkeep",
+        "magtheridon", "moltencore", "naxx", "onyxia", "rs", "ssc", "tbc-ac", "tempestkeep",
         "ulduar", "voa", "wotlk-an", "wotlk-cos", "wotlk-dtk", "wotlk-eoe", "wotlk-fos",
         "wotlk-gd", "wotlk-hol", "wotlk-hor", "wotlk-hos", "wotlk-nex", "wotlk-occ",
         "wotlk-ok", "wotlk-os", "wotlk-pos", "wotlk-toc", "wotlk-uk", "wotlk-up",
@@ -1730,7 +1732,7 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
             strategyName = "tempestkeep";  // Tempest Keep: The Eye
             break;
         case 558:
-            strategyName = "tbc-ac"; // Auchindoun: Auchenai Crypts
+            strategyName = "tbc-ac";  // Auchindoun: Auchenai Crypts
             break;
         case 564:
             strategyName = "blacktemple";  // Black Temple
@@ -1804,6 +1806,9 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
         case 668:
             strategyName = "wotlk-hor";  // Halls of Reflection
             break;
+        case 724:
+            strategyName = "rs";  // Ruby Sanctum
+            break;
         default:
             break;
     }
@@ -1819,6 +1824,10 @@ void PlayerbotAI::ApplyInstanceStrategies(uint32 mapId, bool tellMaster)
     //    out << "切换 " << strategyName << " 副本策略";
     //    TellMasterNoFacing(out.str());
     //}
+}
+bool PlayerbotAI::HasTargetExclusions() const
+{
+    return engines[BOT_STATE_COMBAT] && engines[BOT_STATE_COMBAT]->HasTargetExclusions();
 }
 
 bool PlayerbotAI::DoSpecificAction(std::string const name, Event event, bool silent, std::string const qualifier)
@@ -2091,7 +2100,7 @@ bool PlayerbotAI::HasAggro(Unit* unit)
     if (!IsValidUnit(unit))
         return false;
 
-    bool isMT = IsMainTank(bot);
+    bool isMT = IsExplicitMainTank(bot);
     Unit* victim = unit->GetVictim();
     if (victim && (victim->GetGUID() == bot->GetGUID() || (!isMT && victim->ToPlayer() && IsTank(victim->ToPlayer()))))
     {
@@ -2426,46 +2435,49 @@ bool PlayerbotAI::IsDps(Player* player, bool bySpec)
     return false;
 }
 
-bool PlayerbotAI::IsMainTank(Player* player, bool ignoreMemberFlag)
+ObjectGuid PlayerbotAI::GetMainTankGuid(Group* group)
+{
+    if (!group)
+        return ObjectGuid::Empty;
+
+    Group::MemberSlotList const& slots = group->GetMemberSlots();
+    for (Group::member_citerator itr = slots.begin(); itr != slots.end(); ++itr)
+    {
+        if (itr->flags & MEMBER_FLAG_MAINTANK)
+            return itr->guid;
+    }
+
+    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    {
+        Player* member = ref->GetSource();
+        if (member && IsTank(member) && member->IsAlive())
+            return member->GetGUID();
+    }
+
+    return ObjectGuid::Empty;
+}
+
+bool PlayerbotAI::IsMainTank(Player* player)
 {
     Group* group = player->GetGroup();
     if (!group)
         return IsTank(player);
 
-    ObjectGuid mainTank = ObjectGuid();
+    ObjectGuid const mainTankGuid = GetMainTankGuid(group);
+    return !mainTankGuid.IsEmpty() && player->GetGUID() == mainTankGuid;
+}
 
-    // (1) Check for main tank flag (any class or spec)
-    if (!ignoreMemberFlag)
-    {
-        Group::MemberSlotList const& slots = group->GetMemberSlots();
-
-        for (Group::member_citerator itr = slots.begin(); itr != slots.end(); ++itr)
-        {
-            if (itr->flags & MEMBER_FLAG_MAINTANK)
-            {
-                mainTank = itr->guid;
-                break;
-            }
-        }
-
-        if (mainTank != ObjectGuid::Empty)
-            return player->GetGUID() == mainTank;
-    }
-
-    // (2) If no main tank flag, return the first tank
-    if (!IsTank(player) || !player->IsAlive())
+bool PlayerbotAI::IsExplicitMainTank(Player* player)
+{
+    Group* group = player->GetGroup();
+    if (!group)
         return false;
 
-    for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
+    for (Group::member_citerator itr = group->GetMemberSlots().begin(); itr != group->GetMemberSlots().end(); ++itr)
     {
-        Player* member = ref->GetSource();
-        if (!member)
-            continue;
-
-        if (IsTank(member) && member->IsAlive())
-            return player->GetGUID() == member->GetGUID();
+        if (itr->flags & MEMBER_FLAG_MAINTANK)
+            return player->GetGUID() == itr->guid;
     }
-
     return false;
 }
 
@@ -2535,19 +2547,31 @@ uint32 PlayerbotAI::GetGroupTankNum(Player* player)
 
 bool PlayerbotAI::IsAssistTank(Player* player)
 {
-    return IsTank(player) && !IsMainTank(player);
-}
-
-bool PlayerbotAI::IsAssistTankOfIndex(Player* player, uint8 index, bool ignoreDeadPlayers)
-{
-    if (!IsAssistTank(player))
-        return false;
-
-    if (ignoreDeadPlayers && !player->IsAlive())
+    if (!IsTank(player))
         return false;
 
     Group* group = player->GetGroup();
     if (!group)
+        return false;
+
+    return player->GetGUID() != GetMainTankGuid(group);
+}
+
+bool PlayerbotAI::IsAssistTankOfIndex(Player* player, uint8 index, bool ignoreDeadPlayers)
+{
+    if (!IsTank(player))
+        return false;
+
+    Group* group = player->GetGroup();
+    if (!group)
+        return false;
+
+    ObjectGuid const mainTankGuid = GetMainTankGuid(group);
+
+    if (player->GetGUID() == mainTankGuid)
+        return false;
+
+    if (ignoreDeadPlayers && !player->IsAlive())
         return false;
 
     uint8 totalAssistants = 0;
@@ -2558,8 +2582,11 @@ bool PlayerbotAI::IsAssistTankOfIndex(Player* player, uint8 index, bool ignoreDe
     for (GroupReference* ref = group->GetFirstMember(); ref; ref = ref->next())
     {
         Player* member = ref->GetSource();
-        if (!member || (ignoreDeadPlayers && !member->IsAlive()) || !IsAssistTank(member))
+        if (!member || (ignoreDeadPlayers && !member->IsAlive()) || !IsTank(member) ||
+            member->GetGUID() == mainTankGuid)
+        {
             continue;
+        }
 
         bool isAssistant = group->IsAssistant(member->GetGUID());
 
@@ -2646,7 +2673,7 @@ Player* PlayerbotAI::GetPlayer(ObjectGuid guid)
 uint32 GetCreatureIdForCreatureTemplateId(uint32 creatureTemplateId)
 {
     QueryResult results =
-        WorldDatabase.Query("SELECT guid FROM `creature` WHERE id1 = {} LIMIT 1;", creatureTemplateId);
+        WorldDatabase.Query("SELECT guid FROM `creature` WHERE id = {} LIMIT 1;", creatureTemplateId);
     if (results)
     {
         Field* fields = results->Fetch();
@@ -2667,7 +2694,7 @@ Unit* PlayerbotAI::GetUnit(CreatureData const* creatureData)
     uint32 spawnId = creatureData->spawnId;
     if (!spawnId)  // workaround for CreatureData with missing spawnId (this just uses first matching creatureId in DB,
                    // but thats ok this method is only used for battlemasters and theres only 1 of each type)
-        spawnId = GetCreatureIdForCreatureTemplateId(creatureData->id1);
+        spawnId = GetCreatureIdForCreatureTemplateId(creatureData->id);
     auto creatureBounds = map->GetCreatureBySpawnIdStore().equal_range(spawnId);
     if (creatureBounds.first == creatureBounds.second)
         return nullptr;
@@ -4538,7 +4565,7 @@ bool PlayerbotAI::HasRealPlayerMaster()
 
 bool PlayerbotAI::HasActivePlayerMaster() { return master && !GET_PLAYERBOT_AI(master); }
 
-bool PlayerbotAI::IsAlt() { return HasRealPlayerMaster() && !sRandomPlayerbotMgr.IsRandomBot(bot); }
+bool PlayerbotAI::IsAltBot() { return HasRealPlayerMaster() && !sRandomPlayerbotMgr.IsRandomBot(bot); }
 
 Player* PlayerbotAI::GetGroupLeader()
 {
@@ -6782,7 +6809,7 @@ float PlayerbotAI::GetItemScoreMultiplier(ItemQualities quality)
     return 1.0f;
 }
 
-bool PlayerbotAI::IsHealingSpell(uint32 spellFamilyName, flag96 spellFalimyFlags)
+bool PlayerbotAI::IsHealingSpell(uint32 spellFamilyName, flag96 spellFamilyFlags)
 {
     if (!spellFamilyName)
         return false;
@@ -6827,7 +6854,7 @@ bool PlayerbotAI::IsHealingSpell(uint32 spellFamilyName, flag96 spellFalimyFlags
         default:
             break;
     }
-    return spellFalimyFlags & healingFlags;
+    return spellFamilyFlags & healingFlags;
 }
 
 SpellFamilyNames PlayerbotAI::Class2SpellFamilyName(uint8 cls)

@@ -3,8 +3,8 @@
  * and/or modify it under version 3 of the License, or (at your option), any later version.
  */
 
-#ifndef _PLAYERBOT_PLAYERBOTAI_H
-#define _PLAYERBOT_PLAYERBOTAI_H
+#ifndef PLAYERBOTS_PLAYERBOTAI_H
+#define PLAYERBOTS_PLAYERBOTAI_H
 
 #include <stack>
 
@@ -28,6 +28,7 @@ class AiObjectContext;
 class Creature;
 class Engine;
 class ExternalEventHelper;
+class Group;
 class Gameobject;
 class Item;
 class ObjectGuid;
@@ -408,6 +409,7 @@ public:
     std::vector<std::string> GetStrategies(BotState type);
     Strategy* GetStrategy(std::string const name, BotState type);
     void ApplyInstanceStrategies(uint32 mapId, bool tellMaster = false);
+    bool HasTargetExclusions() const;
     void EvaluateHealerDpsStrategy();
     bool ContainsStrategy(StrategyType type);
     bool HasStrategy(std::string const name, BotState type);
@@ -424,8 +426,10 @@ public:
     static bool IsCaster(Player* player, bool bySpec = false);
     static bool IsRangedDps(Player* player, bool bySpec = false);
     static bool IsCombo(Player* player);
+    static ObjectGuid GetMainTankGuid(Group* group);
+    static bool IsMainTank(Player* player);
+    static bool IsExplicitMainTank(Player* player);
     static bool IsBotMainTank(Player* player);
-    static bool IsMainTank(Player* player, bool ignoreMemberFlag = false);
     static uint32 GetGroupTankNum(Player* player);
     static bool IsAssistTank(Player* player);
     static bool IsAssistTankOfIndex(Player* player, uint8 index, bool ignoreDeadPlayers = false);
@@ -541,7 +545,7 @@ public:
     bool HasActivePlayerMaster();
     // Get the group leader or the master of the bot.
     // Checks if the bot is summoned as alt of a player
-    bool IsAlt();
+    bool IsAltBot();
     Player* GetGroupLeader();
     uint32 GetFixedBotNumber(uint32 maxNum = 100);
     GrouperType GetGrouperType();
@@ -597,7 +601,7 @@ public:
     std::set<uint32> GetCurrentIncompleteQuestIds();
     void PetFollow();
     static float GetItemScoreMultiplier(ItemQualities quality);
-    static bool IsHealingSpell(uint32 spellFamilyName, flag96 spelFalimyFlags);
+    static bool IsHealingSpell(uint32 spellFamilyName, flag96 spellFamilyFlags);
     static SpellFamilyNames Class2SpellFamilyName(uint8 cls);
     NewRpgInfo rpgInfo;
     NewRpgStatistic rpgStatistic;
