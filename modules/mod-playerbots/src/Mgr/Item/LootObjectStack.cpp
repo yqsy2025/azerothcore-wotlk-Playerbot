@@ -308,9 +308,19 @@ bool LootObject::IsLootPossible(Player* bot)
     // Prevent bot from running to chests that are unlootable (e.g. Gunship Armory before completing the event) or on
     // respawn time
     GameObject* go = botAI->GetGameObject(guid);
-    if (go && (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_INTERACT_COND | GO_FLAG_NOT_SELECTABLE) || !go->isSpawned()))
+    if (go && (go->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE) || !go->isSpawned()))
         return false;
+    // Prevents bot from getting stuck in an infinite loop of
+    // gathering herb/ore/skin -> bag too full, don't pick up -> gather again
+    bool gatheringObject = skillId == SKILL_HERBALISM || skillId == SKILL_MINING || skillId == SKILL_SKINNING ||
+                           skillId == SKILL_ENGINEERING;
+    if (gatheringObject && !IsRealPlayer(botAI->GetMaster()))
+    {
+        uint8 bagUsage = botAI->GetAiObjectContext()->GetValue<uint8>("bag space")->Get();
 
+        if (bagUsage >= 80)
+            return false;
+    }
     if (skillId == SKILL_NONE)
         return true;
 

@@ -10,6 +10,7 @@
 #include "ObjectAccessor.h"
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotSecurity.h"
+#include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "WorldPacket.h"
 
@@ -66,6 +67,8 @@ bool AcceptInvitationAction::Execute(Event event)
     }
     if (sRandomPlayerbotMgr.IsRandomBot(bot))
         botAI->SetMaster(inviter);
+    // else
+    // PlayerbotRepository::instance().Save(botAI);
 
     botAI->ResetStrategies();
     botAI->ChangeStrategy("+follow,-lfg,-bg", BOT_STATE_NON_COMBAT);
@@ -77,6 +80,5 @@ bool AcceptInvitationAction::Execute(Event event)
     {
         Teleport(inviter, bot, true);
     }
-
     return true;
 }

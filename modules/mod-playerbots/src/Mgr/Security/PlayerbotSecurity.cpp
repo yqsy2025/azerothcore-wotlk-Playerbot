@@ -165,7 +165,7 @@ bool PlayerbotSecurity::CheckLevelFor(PlayerbotSecurityLevel level, bool silent,
         return true;
 
     PlayerbotAI* fromBotAI = GET_PLAYERBOT_AI(from);
-    if (silent || (fromBotAI && !fromBotAI->IsRealPlayer()))
+    if (silent || (fromBotAI && !IsSelfBot(from)))
         return false;
 
     PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
@@ -268,8 +268,7 @@ bool PlayerbotSecurity::CheckLevelFor(PlayerbotSecurityLevel level, bool silent,
         whispers[guid][text] = time(nullptr);
 
         // Additional protection against crashes during logout
-        if (bot->IsInWorld() && from->IsInWorld() && from->GetMap() && !from->GetMap()->IsDungeon() &&
-            !from->InBattleground())
+        if (bot->IsInWorld() && from->IsInWorld())
             bot->Whisper(text, LANG_UNIVERSAL, from);
     }
 

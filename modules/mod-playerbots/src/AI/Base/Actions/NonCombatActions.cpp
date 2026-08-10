@@ -5,8 +5,7 @@
  */
 
 #include "NonCombatActions.h"
-#include <algorithm>
-#include <cmath>
+
 #include "Event.h"
 #include "Playerbots.h"
 
@@ -47,18 +46,26 @@ bool DrinkAction::Execute(Event event)
 
         if (bot->isMoving())
         {
-            bot->GetMotionMaster()->Clear(false);
             bot->StopMoving();
             // botAI->SetNextCheckDelay(sPlayerbotAIConfig->globalCoolDown);
             // return false;
         }
         bot->SetStandState(UNIT_STAND_STATE_SIT);
         botAI->InterruptSpell();
+        // float hp = bot->GetHealthPercent();
+        float mp = bot->GetPowerPct(POWER_MANA);
+        float p = mp;
+        float delay;
 
-        // 25990 restores 5% per 2s tick; wait whole ticks so the drink finishes.
-        botAI->SetNextCheckDelay(uint32(std::max(1.0f, std::ceil((100.0f - bot->GetPowerPct(POWER_MANA)) / 5.0f))) * 2 *
-                                 IN_MILLISECONDS);
+        if (!bot->InBattleground())
+            delay = 18000.0f * (100 - p) / 100.0f;
+        else
+            delay = 12000.0f * (100 - p) / 100.0f;
+
+        botAI->SetNextCheckDelay(delay);
+
         bot->AddAura(25990, bot);
+
         if (bot->GetGroup() && !bot->InBattleground())
         {
             if (botAI->IsHeal(bot))
@@ -105,7 +112,6 @@ bool EatAction::Execute(Event event)
 
         if (bot->isMoving())
         {
-            bot->GetMotionMaster()->Clear(false);
             bot->StopMoving();
             // botAI->SetNextCheckDelay(sPlayerbotAIConfig.globalCoolDown);
             // return false;
@@ -114,9 +120,18 @@ bool EatAction::Execute(Event event)
         bot->SetStandState(UNIT_STAND_STATE_SIT);
         botAI->InterruptSpell();
 
-        // 25990 restores 5% per 2s tick; wait whole ticks so the meal finishes.
-        botAI->SetNextCheckDelay(uint32(std::max(1.0f, std::ceil((100.0f - bot->GetHealthPct()) / 5.0f))) * 2 *
-                                 IN_MILLISECONDS);
+        float hp = bot->GetHealthPct();
+        // float mp = bot->HasMana() ? bot->GetPowerPercent() : 0.f;
+        float p = hp;
+        float delay;
+
+        if (!bot->InBattleground())
+            delay = 18000.0f * (100 - p) / 100.0f;
+        else
+            delay = 12000.0f * (100 - p) / 100.0f;
+
+        botAI->SetNextCheckDelay(delay);
+
         bot->AddAura(25990, bot);
         return true;
     }
