@@ -5,16 +5,9 @@
  */
 
 #include "MovementActions.h"
-
-#include <cmath>
-#include <cstdlib>
-#include <iomanip>
-#include <string>
-
 #include "Corpse.h"
 #include "Event.h"
 #include "FleeManager.h"
-#include "G3D/Vector3.h"
 #include "GameObject.h"
 #include "LastMovementValue.h"
 #include "LootObjectStack.h"
@@ -40,6 +33,11 @@
 #include "Unit.h"
 #include "Vehicle.h"
 #include "WaypointMovementGenerator.h"
+#include "G3D/Vector3.h"
+#include <cmath>
+#include <cstdlib>
+#include <iomanip>
+#include <string>
 
 MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Action(botAI, name)
 {
@@ -1385,11 +1383,7 @@ bool MovementAction::Flee(Unit* target)
         }
     }
 
-    //Unit* currentVictim = target->GetThreatMgr().GetCurrentVictim();//修复crash
-    Unit* currentVictim = nullptr;
-
-    if (Creature* creature = target->ToCreature())
-        currentVictim = creature->GetThreatMgr().GetCurrentVictim();
+    Unit* currentVictim = target->GetThreatMgr().GetCurrentVictim();
     if (currentVictim && currentVictim == bot)  // bot is target - try to flee to tank or master
     {
         if (Group* group = bot->GetGroup())
@@ -1479,8 +1473,7 @@ bool MovementAction::Flee(Unit* target)
                 {
                     spareTarget = player;
                     spareDistance = distanceToFlee;
-                    //possibleTargets.push_back(fleeTarget);
-                    possibleTargets.push_back(spareTarget);
+                    possibleTargets.push_back(fleeTarget);
                 }
             }
 

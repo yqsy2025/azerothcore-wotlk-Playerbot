@@ -5,19 +5,11 @@
  */
 
 #include "RandomPlayerbotMgr.h"
-
-#include <WorldSessionMgr.h>
-
-#include <algorithm>
-#include <boost/thread/thread.hpp>
-#include <cstdlib>
-#include <ctime>
-#include <iomanip>
-#include <random>
-
 #include "AiFactory.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "Cell.h"
+#include "CellImpl.h"
 #include "ChannelMgr.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
@@ -25,6 +17,7 @@
 #include "Define.h"
 #include "FleeManager.h"
 #include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 #include "LFGMgr.h"
 #include "MapMgr.h"
 #include "NewRpgInfo.h"
@@ -46,10 +39,13 @@
 #include "TravelMgr.h"
 #include "Unit.h"
 #include "World.h"
-#include "Cell.h"
-#include "GridNotifiers.h"
-#include "CellImpl.h"
-#include "GridNotifiersImpl.h"
+#include "WorldSessionMgr.h"
+#include <algorithm>
+#include <boost/thread/thread.hpp>
+#include <cstdlib>
+#include <ctime>
+#include <iomanip>
+#include <random>
 
 struct GuidClassRaceInfo
 {
@@ -1773,6 +1769,23 @@ void RandomPlayerbotMgr::Init()
     PlayerbotsDatabase.Execute("DELETE FROM playerbots_random_bots WHERE event = 'add'");
 }
 
+void RandomPlayerbotMgr::InitArenaTeams()
+{
+    if (sPlayerbotAIConfig.deleteRandomBotArenaTeams)
+    {
+        RandomPlayerbotFactory::DeleteBotArenaTeams();
+        return;
+    }
+
+    RandomPlayerbotFactory::LoadArenaTeamData();
+
+    LOG_INFO("playerbots", "Bot arena teams: 2v2={}/{}, 3v3={}/{}, 5v5={}/{}",
+			 RandomPlayerbotFactory::GetBotArenaTeamCount(ARENA_TYPE_1v1), sPlayerbotAIConfig.randomBotArenaTeam1v1Count,
+             RandomPlayerbotFactory::GetBotArenaTeamCount(ARENA_TYPE_2v2), sPlayerbotAIConfig.randomBotArenaTeam2v2Count,
+             RandomPlayerbotFactory::GetBotArenaTeamCount(ARENA_TYPE_3v3), sPlayerbotAIConfig.randomBotArenaTeam3v3Count,
+             RandomPlayerbotFactory::GetBotArenaTeamCount(ARENA_TYPE_5v5), sPlayerbotAIConfig.randomBotArenaTeam5v5Count);
+}
+
 void RandomPlayerbotMgr::RandomTeleportForLevel(Player* bot)
 {
     if (bot->InBattleground())
@@ -2496,10 +2509,23 @@ bool RandomPlayerbotMgr::HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/,
 
 void RandomPlayerbotMgr::HandleCommand(uint32 type, std::string const text, Player* fromPlayer, std::string channelName)
 {
+    // The sender needs guarding too: chatting right after a (GM/panel) teleport
+    // reached LevelFor(from) with transient map/group state and crashed
+    // (Andrew's repro, 2026-08-20). Symmetric to the per-bot guard below.
+    if (!fromPlayer || !fromPlayer->IsInWorld() || fromPlayer->IsBeingTeleported() || !fromPlayer->FindMap())
+        return;
     for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin(); it != GetPlayerBotsEnd(); ++it)
     {
         Player* const bot = it->second;
-        if (!bot)
+        // Bots mid-login/logout sit in this map without a usable Player or AI.
+        // Chatting during a login flood walked into them: GET_PLAYERBOT_AI
+        // returned null and ->HandleCommand crashed the server (SIGSEGV 0x258,
+        // 2026-08-20). Skip anything not fully in the world with an attached AI.
+        if (!bot || !bot->IsInWorld() || bot->IsBeingTeleported())
+            continue;
+
+        PlayerbotAI* botAI = GET_PLAYERBOT_AI(bot);
+        if (!botAI)
             continue;
 
         if (!channelName.empty())
@@ -2512,7 +2538,7 @@ void RandomPlayerbotMgr::HandleCommand(uint32 type, std::string const text, Play
             }
         }
 
-        GET_PLAYERBOT_AI(bot)->HandleCommand(type, text, fromPlayer);
+        botAI->HandleCommand(type, text, fromPlayer);
     }
 }
 
@@ -2558,6 +2584,8 @@ void RandomPlayerbotMgr::OnBotLoginInternal(Player* const bot)
         PlayerbotFactory factory(bot, bot->GetLevel());
         factory.InitGuild();
     }
+
+    RandomPlayerbotFactory::AssignBotToArenaTeam(bot);
 
     if (sPlayerbotAIConfig.randomBotFixedLevel)
     {

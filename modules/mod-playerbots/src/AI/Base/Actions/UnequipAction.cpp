@@ -5,12 +5,11 @@
  */
 
 #include "UnequipAction.h"
-
 #include "Event.h"
 #include "ItemCountValue.h"
+#include "ItemPackets.h"
 #include "Playerbots.h"
 #include "WorldSession.h"
-#include "ItemPackets.h"
 
 std::vector<std::string> split(std::string const s, char delim);
 
@@ -78,6 +77,6 @@ void UnequipAction::UnequipItem(Item* item)
     bot->GetSession()->HandleAutoStoreBagItemOpcode(nicePacket);
 
     std::ostringstream out;
-    out << chat->FormatItem(item->GetTemplate()) << " 未装备";
+    out << chat->FormatItem(item->GetTemplate()) << " unequipped";
     botAI->TellMaster(out);
 }

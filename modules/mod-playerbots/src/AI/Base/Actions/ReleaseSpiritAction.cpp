@@ -4,17 +4,16 @@
  */
 
 #include "ReleaseSpiritAction.h"
-#include "ServerFacade.h"
+#include "Corpse.h"
 #include "Event.h"
 #include "GameGraveyard.h"
+#include "Log.h"
 #include "NearestNpcsValue.h"
 #include "ObjectDefines.h"
 #include "ObjectGuid.h"
 #include "PlayerbotTextMgr.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
-#include "Corpse.h"
-#include "Log.h"
 
 // ReleaseSpiritAction implementation
 bool ReleaseSpiritAction::Execute(Event event)
@@ -24,7 +23,7 @@ bool ReleaseSpiritAction::Execute(Event event)
         if (!bot->InBattleground())
         {
             botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                "release_spirit_not_dead_wait", "我没死,我在这里等你", {}));
+                "release_spirit_not_dead_wait", "I am not dead, will wait here", {}));
             // -follow in bg is overwriten each tick with +follow
             // +stay in bg causes stuttering effect as bot is cycled between +stay and +follow each tick
             botAI->ChangeStrategy("-follow,+stay", BOT_STATE_NON_COMBAT);
@@ -36,14 +35,14 @@ bool ReleaseSpiritAction::Execute(Event event)
     if (bot->GetCorpse() && bot->HasPlayerFlag(PLAYER_FLAGS_GHOST))
     {
         botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "release_spirit_already_spirit", "我已经是灵魂状态", {}));
+            "release_spirit_already_spirit", "I am already a spirit", {}));
         return false;
     }
 
     const WorldPacket& packet = event.getPacket();
     const std::string message = !packet.empty() && packet.GetOpcode() == CMSG_REPOP_REQUEST
-        ? PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_releasing", "释放灵魂...", {})
-        : PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_meet_graveyard", "墓地见", {});
+        ? PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_releasing", "Releasing...", {})
+        : PlayerbotTextMgr::instance().GetBotTextOrDefault("release_spirit_meet_graveyard", "Meet me at the graveyard", {});
     botAI->TellMasterNoFacing(message);
 
     IncrementDeathCount();
@@ -59,8 +58,6 @@ bool ReleaseSpiritAction::Execute(Event event)
 
 void ReleaseSpiritAction::IncrementDeathCount() const
 {
-    if (bot && bot->InBattleground())
-        return;
     // Death Count to prevent skeleton piles
     Player* master = botAI->GetMaster();
     if (!master || GET_PLAYERBOT_AI(master))
@@ -120,13 +117,6 @@ bool AutoReleaseSpiritAction::isUseful()
 
 bool AutoReleaseSpiritAction::HandleBattlegroundSpiritHealer()
 {
-    if (!bot || !bot->InBattleground())
-        return false;
-
-    if (!bot->isDead())
-        return false;
-
-    bot->RepopAtGraveyard();
     constexpr uint32_t RESURRECT_DELAY = 15;
     const time_t now = time(nullptr);
 
@@ -136,7 +126,7 @@ bool AutoReleaseSpiritAction::HandleBattlegroundSpiritHealer()
         return false;
     }
 
-    float bgRange = 20.0f;
+    float bgRange = 2000.0f;
     GuidVector npcs = NearestNpcsValue(botAI, bgRange);
     Unit* spiritHealer = nullptr;
 
@@ -153,7 +143,18 @@ bool AutoReleaseSpiritAction::HandleBattlegroundSpiritHealer()
     if (!spiritHealer)
         return false;
 
-    if (!IsRealPlayer(bot))
+    if (bot->GetDistance(spiritHealer) >= INTERACTION_DISTANCE)
+    {
+        // Bot needs to actually click spirit-healer in BG to get res timer going
+        // and in IOC it's not within clicking range when they res in own base
+
+        // Teleport to nearest friendly Spirit Healer when not currently in range of one.
+        bot->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TELEPORTED | AURA_INTERRUPT_FLAG_CHANGE_MAP);
+        bot->TeleportTo(bot->GetMapId(), spiritHealer->GetPositionX(), spiritHealer->GetPositionY(), spiritHealer->GetPositionZ(), 0.f);
+        RESET_AI_VALUE(bool, "combat::self target");
+        RESET_AI_VALUE(WorldPosition, "current position");
+    }
+    else if (!IsSelfBot(bot))
     {
         m_bgGossipTime = now;
         WorldPacket packet(CMSG_GOSSIP_HELLO);

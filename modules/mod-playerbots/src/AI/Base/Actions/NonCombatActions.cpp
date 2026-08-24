@@ -5,9 +5,10 @@
  */
 
 #include "NonCombatActions.h"
-
 #include "Event.h"
 #include "Playerbots.h"
+#include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -46,33 +47,20 @@ bool DrinkAction::Execute(Event event)
 
         if (bot->isMoving())
         {
+            bot->GetMotionMaster()->Clear(false);
             bot->StopMoving();
-            // botAI->SetNextCheckDelay(sPlayerbotAIConfig->globalCoolDown);
-            // return false;
         }
         bot->SetStandState(UNIT_STAND_STATE_SIT);
         botAI->InterruptSpell();
-        // float hp = bot->GetHealthPercent();
-        float mp = bot->GetPowerPct(POWER_MANA);
-        float p = mp;
+
         float delay;
 
-        if (!bot->InBattleground())
-            delay = 18000.0f * (100 - p) / 100.0f;
-        else
-            delay = 12000.0f * (100 - p) / 100.0f;
+        // 25990 restores 5% per 2s tick; wait whole ticks so the drink finishes.
+        delay = std::max(1.0f, std::ceil((100.0f - bot->GetPowerPct(POWER_MANA)) / 5.0f)) * 2 * IN_MILLISECONDS;
 
         botAI->SetNextCheckDelay(delay);
 
         bot->AddAura(25990, bot);
-
-        if (bot->GetGroup() && !bot->InBattleground())
-        {
-            if (botAI->IsHeal(bot))
-                botAI->SayToParty("别开,治疗没蓝!!!");
-            else
-                botAI->SayToParty("别开,我在恢复!");
-        }
         return true;
         // return botAI->CastSpell(24707, bot);
     }
@@ -112,23 +100,17 @@ bool EatAction::Execute(Event event)
 
         if (bot->isMoving())
         {
+            bot->GetMotionMaster()->Clear(false);
             bot->StopMoving();
-            // botAI->SetNextCheckDelay(sPlayerbotAIConfig.globalCoolDown);
-            // return false;
         }
 
         bot->SetStandState(UNIT_STAND_STATE_SIT);
         botAI->InterruptSpell();
 
-        float hp = bot->GetHealthPct();
-        // float mp = bot->HasMana() ? bot->GetPowerPercent() : 0.f;
-        float p = hp;
         float delay;
 
-        if (!bot->InBattleground())
-            delay = 18000.0f * (100 - p) / 100.0f;
-        else
-            delay = 12000.0f * (100 - p) / 100.0f;
+        // 25990 restores 5% per 2s tick; wait whole ticks so the meal finishes.
+        delay = std::max(1.0f, std::ceil((100.0f - bot->GetHealthPct()) / 5.0f)) * 2 * IN_MILLISECONDS;
 
         botAI->SetNextCheckDelay(delay);
 
@@ -139,7 +121,7 @@ bool EatAction::Execute(Event event)
     return UseItemAction::Execute(event);
 }
 
-bool EatAction::isUseful() { return UseItemAction::isUseful() && AI_VALUE2(uint8, "health", "self target") < 50; }
+bool EatAction::isUseful() { return UseItemAction::isUseful() && AI_VALUE2(uint8, "health", "self target") < 100; }
 
 bool EatAction::isPossible()
 {

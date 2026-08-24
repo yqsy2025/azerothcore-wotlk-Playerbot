@@ -5,7 +5,6 @@
  */
 
 #include "UseMeetingStoneAction.h"
-
 #include "CellImpl.h"
 #include "Event.h"
 #include "GridNotifiers.h"
@@ -39,7 +38,7 @@ bool UseMeetingStoneAction::Execute(Event event)
     if (bot->IsInCombat())
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "meeting_stone_in_combat", "我正在战斗", {}));
+            "meeting_stone_in_combat", "I am in combat", {}));
         return false;
     }
 
@@ -77,14 +76,14 @@ bool SummonAction::Execute(Event /*event*/)
     if (SummonUsingGos(master, bot, true) || SummonUsingNpcs(master, bot, true))
     {
         botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "hello", "老铁!", {}));
+            "hello", "Hello!", {}));
         return true;
     }
 
     if (SummonUsingGos(bot, master, true) || SummonUsingNpcs(bot, master, true))
     {
         botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "meeting_stone_welcome", "欢迎!", {}));
+            "meeting_stone_welcome", "Welcome!", {}));
         return true;
     }
 
@@ -129,7 +128,7 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
             {
                 botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     player == bot ? "meeting_stone_no_hearthstone_self" : "meeting_stone_no_hearthstone_you",
-                    player == bot ? "我没有炉石" : "你没有炉石",
+                    player == bot ? "I have no hearthstone" : "You have no hearthstone",
                     {}));
                 return false;
             }
@@ -138,7 +137,7 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
             {
                 botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                     player == bot ? "meeting_stone_hearthstone_not_ready_self" : "meeting_stone_hearthstone_not_ready_you",
-                    player == bot ? "我炉石没冷却" : "你炉石没冷却",
+                    player == bot ? "My hearthstone is not ready" : "Your hearthstone is not ready",
                     {}));
                 return false;
             }
@@ -157,7 +156,7 @@ bool SummonAction::SummonUsingNpcs(Player* summoner, Player* player, bool preser
 
     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
         summoner == bot ? "meeting_stone_no_innkeepers_nearby" : "meeting_stone_no_innkeepers_near_you",
-        summoner == bot ? "这附近没有旅店老板" : "您附近没有旅店老板",
+        summoner == bot ? "There are no innkeepers nearby" : "There are no innkeepers near you",
         {}));
     return false;
 }
@@ -171,7 +170,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
     if (player->GetVehicle())
     {
         botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-            "meeting_stone_cannot_summon_vehicle", "你在载具上时无法召唤我", {}));
+            "meeting_stone_cannot_summon_vehicle", "You cannot summon me while I'm on a vehicle", {}));
         return false;
     }
 
@@ -194,7 +193,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 {
                     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "meeting_stone_cannot_summon_master_in_combat",
-                        "你在战斗中无法召唤我",
+                        "You cannot summon me while you're in combat",
                         {}));
                     return false;
                 }
@@ -203,7 +202,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 {
                     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "meeting_stone_cannot_summon_master_dead",
-                        "你已死亡无法召唤我",
+                        "You cannot summon me while you're dead",
                         {}));
                     return false;
                 }
@@ -213,7 +212,7 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                 {
                     botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
                         "meeting_stone_cannot_summon_bot_dead",
-                        "我死后你无法召唤我，你需要先释放我的灵魂",
+                        "You cannot summon me while I'm dead, you need to release my spirit first",
                         {}));
                     return false;
                 }
@@ -222,24 +221,13 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
                     sPlayerbotAIConfig.reviveBotWhenSummoned == 2 ||
                     (sPlayerbotAIConfig.reviveBotWhenSummoned == 1 && !summoner->IsInCombat() && summoner->IsAlive());
 
-                if (bot->isDead() && revive &&
-                    !(summoner->getClass() == CLASS_HUNTER &&
-                      summoner->GetMap() && summoner->GetMap()->IsRaidOrHeroicDungeon()))
+                if (bot->isDead() && revive)
                 {
                     bot->ResurrectPlayer(1.0f, false);
                     bot->SpawnCorpseBones();
-                    if (bot->GetGroup())
-                    {
-                        botAI->SayToParty("我复活了");
-                    }
-                    else
-                    {
-                        botAI->TellMasterNoFacing("我复活了!");
-                    }
-
+                    botAI->TellMasterNoFacing(PlayerbotTextMgr::instance().GetBotTextOrDefault(
+                        "meeting_stone_revived", "I live, again!", {}));
                     botAI->GetAiObjectContext()->GetValue<GuidVector>("prioritized targets")->Reset();
-                    botAI->Reset(true);
-                    botAI->ResetStrategies();
                 }
 
                 player->GetMotionMaster()->Clear();
@@ -269,6 +257,6 @@ bool SummonAction::Teleport(Player* summoner, Player* player, bool preserveAuras
 
     if (summoner != player)
          botAI->TellError(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-             "meeting_stone_not_enough_space", "没有足够的空间进行召唤", {}));
+             "meeting_stone_not_enough_space", "Not enough place to summon", {}));
     return false;
 }

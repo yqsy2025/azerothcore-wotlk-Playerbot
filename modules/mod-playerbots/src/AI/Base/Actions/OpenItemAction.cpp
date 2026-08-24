@@ -5,13 +5,13 @@
  */
 
 #include "OpenItemAction.h"
-#include "PlayerbotAI.h"
-#include "ItemTemplate.h"
-#include "WorldPacket.h"
-#include "Player.h"
-#include "ObjectMgr.h"
-#include "LootObjectStack.h"
 #include "AiObjectContext.h"
+#include "ItemTemplate.h"
+#include "LootObjectStack.h"
+#include "ObjectMgr.h"
+#include "Player.h"
+#include "PlayerbotAI.h"
+#include "WorldPacket.h"
 
 bool OpenItemAction::Execute(Event /*event*/)
 {
@@ -42,6 +42,6 @@ void OpenItemAction::OpenItem(Item* item, uint8 bag, uint8 slot)
     botAI->GetAiObjectContext()->GetValue<LootObject>("loot target")->Set(lootObject);
 
     std::ostringstream out;
-    out << "打开物品: " << item->GetTemplate()->Name1;
+    out << "Opened item: " << item->GetTemplate()->Name1;
     botAI->TellMaster(out.str());
 }

@@ -9,5 +9,6 @@
 
 #include "ACActionContext.h"
 #include "MechActionContext.h"
+#include "SethActionContext.h"
 
 #endif

@@ -5,17 +5,15 @@
  */
 
 #include "TravelNode.h"
-
-#include <iomanip>
-#include <regex>
-#include <unordered_set>
-
 #include "BudgetValues.h"
 #include "PathGenerator.h"
 #include "Playerbots.h"
 #include "RaceMgr.h"
 #include "ServerFacade.h"
 #include "TransportMgr.h"
+#include <iomanip>
+#include <regex>
+#include <unordered_set>
 
 // TravelNodePath(float distance = 0.1f, float extraCost = 0, TravelNodePathType pathType = TravelNodePathType::walk,
 // uint32 pathObject = 0, bool calculated = false, std::vector<uint8> maxLevelCreature = { 0,0,0 }, float swimDistance =
@@ -1212,6 +1210,7 @@ TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Pla
             if (homeNode)
             {
                 PortalNode* portNode = (PortalNode*)TravelNodeMap::instance().teleportNodes[bot->GetGUID()][8690];
+                if (!portNode)
                 {
                     portNode = new PortalNode(start);
 
@@ -1379,6 +1378,7 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
     {
         startPath.clear();
         TravelNode* botNode = TravelNodeMap::instance().teleportNodes[bot->GetGUID()][0];
+        if (!botNode)
         {
             botNode = new TravelNode(startPos, "Bot Pos", false);
             TravelNodeMap::instance().teleportNodes[bot->GetGUID()][0] = botNode;

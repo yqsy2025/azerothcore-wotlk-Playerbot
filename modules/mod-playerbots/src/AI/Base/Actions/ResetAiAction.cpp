@@ -5,7 +5,6 @@
  */
 
 #include "ResetAiAction.h"
-
 #include "Event.h"
 #include "Group.h"
 #include "ObjectGuid.h"
@@ -62,6 +61,6 @@ bool ResetAiAction::Execute(Event event)
     }
     PlayerbotRepository::instance().Reset(botAI);
     botAI->ResetStrategies(false);
-    botAI->TellMaster("机器人智能程度恢复默认水平");
+    botAI->TellMaster("AI was reset to defaults");
     return true;
 }

@@ -206,10 +206,10 @@ struct BattlegroundObjectInfo
 enum ArenaType : uint8
 {
     ARENA_TYPE_NONE                 = 0,
+    ARENA_TYPE_1v1                  = 1,
     ARENA_TYPE_2v2                  = 2,
     ARENA_TYPE_3v3                  = 3,
-    ARENA_TYPE_5v5                  = 5,
-    ARENA_TYPE_1v1                  = 1
+    ARENA_TYPE_5v5                  = 5
 };
 
 enum BattlegroundType
@@ -368,7 +368,7 @@ public:
     void SetRandomTypeID(BattlegroundTypeId TypeID) { m_RandomTypeID = TypeID; }
     void SetBracket(PvPDifficultyEntry const* bracketEntry);
     void SetInstanceID(uint32 InstanceID) { m_InstanceID = InstanceID; }
-    void SetStatus(BattlegroundStatus Status) { m_Status = Status; }
+    void SetStatus(BattlegroundStatus Status);
     void SetClientInstanceID(uint32 InstanceID) { m_ClientInstanceID = InstanceID; }
     void SetStartTime(uint32 Time) { m_StartTime = Time; }
     void SetEndTime(uint32 Time) { m_EndTime = Time; }

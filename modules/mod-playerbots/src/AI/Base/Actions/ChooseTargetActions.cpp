@@ -5,20 +5,19 @@
  */
 
 #include "ChooseTargetActions.h"
-
 #include "ChooseRpgTargetAction.h"
 #include "Event.h"
 #include "LootObjectStack.h"
 #include "NewRpgStrategy.h"
 #include "Playerbots.h"
-#include "RtiTargetValue.h"
 #include "PossibleRpgTargetsValue.h"
 #include "PvpTriggers.h"
+#include "RtiTargetValue.h"
 #include "ServerFacade.h"
 
 bool AttackEnemyPlayerAction::isUseful()
 {
-    if (PlayerHasFlag::IsCapturingFlag(bot))//背棋的不攻击敌人
+    if (PlayerHasFlag::IsCapturingFlag(bot))
         return false;
 
     return !sPlayerbotAIConfig.IsPvpProhibited(bot->GetZoneId(), bot->GetAreaId());
@@ -93,12 +92,9 @@ bool AttackAnythingAction::Execute(Event event)
     {
         if (Unit* grindTarget = GetTarget())
         {
-            if (char const* grindName = grindTarget->GetName().c_str())
-            {
-                context->GetValue<ObjectGuid>("pull target")->Set(grindTarget->GetGUID());
-                bot->GetMotionMaster()->Clear();
-                // bot->StopMoving();
-            }
+            context->GetValue<ObjectGuid>("pull target")->Set(grindTarget->GetGUID());
+            bot->GetMotionMaster()->Clear();
+            // bot->StopMoving();
         }
     }
 
@@ -178,9 +174,7 @@ bool AttackRtiTargetAction::Execute(Event /*event*/)
         }
     }
     else
-    {
-        botAI->TellError("我看不到我标记的攻击目标");
-    }
+        botAI->TellError("I dont see my rti attack target");
 
     return false;
 }

@@ -5,7 +5,6 @@
  */
 
 #include "QuestConfirmAcceptAction.h"
-
 #include "QuestPackets.h"
 #include "WorldPacket.h"
 
@@ -23,7 +22,7 @@ bool QuestConfirmAcceptAction::Execute(Event event)
         return false;
     }
     std::ostringstream out;
-    out << "任务: " << chat->FormatQuest(quest) << " 确认接受";
+    out << "Quest: " << chat->FormatQuest(quest) << " confirm accept";
     botAI->TellMaster(out);
     WorldPackets::Quest::QuestConfirmAcceptClient confirmAccept(std::move(sendPacket));
     confirmAccept.Read();

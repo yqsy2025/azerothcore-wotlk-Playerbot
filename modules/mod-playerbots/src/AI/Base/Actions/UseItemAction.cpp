@@ -5,7 +5,6 @@
  */
 
 #include "UseItemAction.h"
-
 #include "ChatHelper.h"
 #include "Event.h"
 #include "ItemPackets.h"
@@ -104,9 +103,9 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
     {
         uint32 count = item->GetCount();
         if (count > 1)
-            itemText += " (" + std::to_string(count) + " 可用)";
+            itemText += " (" + std::to_string(count) + " available)";
         else
-            itemText += " (最后一个!)";
+            itemText += " (the last one!)";
     }
 
     if (goGuid)
@@ -130,7 +129,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             bool fit = SocketItem(itemTarget, item) || SocketItem(itemTarget, item, true);
             if (!fit)
                 botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
-                    "socket_does_not_fit", "插槽不匹配", {}));
+                    "socket_does_not_fit", "Socket does not fit", {}));
 
             return fit;
         }
@@ -145,8 +144,8 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
     }
 
     Player* master = GetMaster();
-    if (!targetSelected && item->GetTemplate()->Class != ITEM_CLASS_CONSUMABLE && master && IsRealPlayer(master) &&
-        !selfOnly)
+    if (!targetSelected && item->GetTemplate()->Class != ITEM_CLASS_CONSUMABLE && master &&
+        IsRealPlayer(botAI->GetMaster()) && !selfOnly)
     {
         if (ObjectGuid masterSelection = master->GetTarget())
         {
@@ -179,7 +178,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             packet << uint32(0);
             bot->GetSession()->HandleQuestgiverAcceptQuestOpcode(packet);
 
-            botAI->TellMasterNoFacing("获取任务 " + chat->FormatQuest(qInfo));
+            botAI->TellMasterNoFacing("Got quest " + chat->FormatQuest(qInfo));
             return true;
         }
     }
@@ -221,7 +220,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
                 targetFlag = TARGET_FLAG_TRADE_ITEM;
                 packet << targetFlag << (uint8)1 << ObjectGuid((uint64)TRADE_SLOT_NONTRADED).WriteAsPacked();
                 targetSelected = true;
-                targetText = "在交易物品上";
+                targetText = "traded item";
             }
             else
             {
@@ -250,9 +249,9 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
             targetSelected = true;
 
             if (unitTarget == bot || !unitTarget->IsInWorld() || unitTarget->IsDuringRemoveFromWorld())
-                targetText = "自用";
+                targetText = "self";
             else if (unitTarget->IsHostileTo(bot))
-                targetText = "自用";
+                targetText = "self";
             else
                 targetText = unitTarget->GetName();
         }
@@ -260,7 +259,7 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
         {
             packet << bot->GetPackGUID();
             targetSelected = true;
-            targetText = "自用";
+            targetText = "self";
         }
     }
 
@@ -281,17 +280,17 @@ bool UseItemAction::UseItem(Item* item, ObjectGuid goGuid, Item* itemTarget, Uni
         if (isDrink && isFood)
         {
             p = std::min(hp, mp);
-            TellConsumableUse(item, "享用", p);
+            TellConsumableUse(item, "Feasting", p);
         }
         else if (isDrink)
         {
             p = mp;
-            TellConsumableUse(item, "喝", p);
+            TellConsumableUse(item, "Drinking", p);
         }
         else if (isFood)
         {
             p = std::min(hp, mp);
-            TellConsumableUse(item, "吃", p);
+            TellConsumableUse(item, "Eating", p);
         }
 
         if (!bot->IsInCombat() && !bot->InBattleground())
@@ -383,7 +382,7 @@ bool UseItemAction::SocketItem(Item* item, Item* gem, bool replace)
     {
         botAI->TellMaster(PlayerbotTextMgr::instance().GetBotTextOrDefault(
             "socketing_item_with_gem",
-            "打孔 %item with %gem",
+            "Socketing %item with %gem",
             {{"%item", chat->FormatItem(item->GetTemplate())}, {"%gem", chat->FormatItem(gem->GetTemplate())}}));
 
         WorldPackets::Item::SocketGems nicePacket(std::move(packet));

@@ -7,16 +7,15 @@
 #ifndef PLAYERBOTS_PLAYERBOTAICONFIG_H
 #define PLAYERBOTS_PLAYERBOTAICONFIG_H
 
-#include <mutex>
-#include <unordered_map>
-#include <set>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <string>
-
 #include "DBCEnums.h"
 #include "SharedDefines.h"
+#include <algorithm>
+#include <map>
+#include <mutex>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 enum class BotCheatMask : uint32
 {
@@ -122,6 +121,8 @@ public:
     AutoPartyBuffMode autoPartyBuffs;
     bool tellWhenMissingBuffReagents;
     uint32 missingBuffReagentMessageCooldown;
+    bool forceRebuffOnReadyCheck;
+    uint32 forceRebuffMarginSecs;
     bool autoAvoidAoe;
     float maxAoeAvoidRadius;
     std::set<uint32> aoeAvoidSpellWhitelist;
@@ -399,7 +400,6 @@ public:
     int32 enableRandomBotTrading;
     uint32 tweakValue;  // Debugging config
 
-    uint32 randomBotArenaTeamCount;
     uint32 randomBotArenaTeamMaxRating;
     uint32 randomBotArenaTeamMinRating;
     uint32 randomBotArenaTeam1v1Count;
@@ -407,7 +407,6 @@ public:
     uint32 randomBotArenaTeam3v3Count;
     uint32 randomBotArenaTeam5v5Count;
     bool deleteRandomBotArenaTeams;
-    std::vector<uint32> randomBotArenaTeams;
 
     uint32 selfBotLevel;
     bool downgradeMaxLevelBot;
