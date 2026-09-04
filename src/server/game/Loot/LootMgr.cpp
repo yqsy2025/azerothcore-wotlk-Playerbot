@@ -571,12 +571,13 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     };
 
     std::vector<SpecialItem> specialItems = {
-        {90003,0.04f,1,1},
-        {60116,0.04f,1,1},
-        {60117,0.04f,1,1},
-        {60118,0.03f,1,1},
-        {60119,0.02f,1,1},
-        {60120,0.02f,1,1}
+        {90003,0.01f,1,1},
+        {60116,0.01f,1,1},
+        {60117,0.01f,1,1},
+        {60118,0.01f,1,1},
+        {60119,0.01f,1,1},
+        {60120,0.01f,1,1},
+        {66606,0.01f,1,3}
     };
 
 /*    std::vector<SpecialItem> specialItemsH = {
@@ -588,17 +589,49 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     };*/
 
     if (lootOwner->GetMap() && lootOwner->GetMap()->IsRaidOrHeroicDungeon() && lootSource &&
-        lootSource->ToCreature() && lootSource->ToCreature()->GetLevel() >= 70 && lootSource->ToCreature()->isElite())
+        lootSource->ToCreature() && lootSource->ToCreature()->GetLevel() >= 80 &&
+        lootSource->ToCreature()->isElite())
     {
+        bool isBoss = lootSource->ToCreature()->IsDungeonBoss();
+        // 获取 BOSS 最大血量
+        uint32 bossMaxHp = lootSource->ToCreature()->GetMaxHealth();
         for (const auto& item : specialItems)
         {
-            if (urand(1, 100) <= item.chance * 100)  // 判断是否掉落
+            // 计算最终概率：BOSS 时翻倍，且上限 100%
+            float finalChance = item.chance;
+            // ========== 60116 血量阶梯概率 ==========
+            if (item.id == 60116 && isBoss && bossMaxHp > 2000000)
+            {
+                // 计算血量是 100万 的多少倍（整数倍）
+                uint32 hpTier = bossMaxHp / 1000000;
+
+                if (hpTier >= 10)
+                {
+                    // 10倍（2000万）及以上：100%
+                    finalChance = 1.0f;
+                }
+                else
+                {
+                    // 超过200万后，每多1倍加10%
+                    finalChance = 0.20f + (hpTier - 1) * 0.10f;
+                }
+            }
+            // ========== 其他物品 / 普通 BOSS：概率翻倍 ==========
+            else if (isBoss)
+            {
+                finalChance *= 5.0f;
+            }
+
+            // 上限保护（不超过 100%）
+            if (finalChance > 1.0f)
+                finalChance = 1.0f;
+            if (urand(1, 100) <= static_cast<uint32>(finalChance * 100.0f + 0.5f))  // 判断是否掉落
             {
                 // 使用适当的参数创建 LootStoreItem 对象
                 LootStoreItem lootItem(
                     item.id,            // 物品ID
                     0,                 // 参考ID（不引用）
-                    item.chance * 100,  // 掉落几率（转换为百分比）
+                    finalChance * 100,  // 掉落几率（转换为百分比）
                     false,             // 是否需要任务（此处为 false，因为不依赖于任务）
                     lootMode,          // 掉落模式
                     0,                 // 掉落分组ID（这里假设使用0）
@@ -609,28 +642,6 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
                 AddItem(lootItem);  // 将物品添加到战利品中
             }
         }
-/*        if(lootOwner->HasAura(15007))
-        {
-            for (const auto& item : specialItemsH)
-            {
-                if (urand(1, 100) <= item.chance * 100)  // 判断是否掉落
-                {
-                    // 使用适当的参数创建 LootStoreItem 对象
-                    LootStoreItem lootItem(
-                        item.id,            // 物品ID
-                        0,                 // 参考ID（不引用）
-                        item.chance * 100,  // 掉落几率（转换为百分比）
-                        false,             // 是否需要任务（此处为 false，因为不依赖于任务）
-                        NEED_BEFORE_GREED,         // 掉落模式,按需分配
-                        0,                 // 掉落分组ID（这里假设使用0）
-                        item.minCount,     // 最小掉落数量
-                        item.maxCount      // 最大掉落数量
-                    );
-
-                    AddItem(lootItem);  // 将物品添加到战利品中
-                }
-            }
-        }*/
     }
 
     // Setting access rights for group loot case

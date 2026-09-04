@@ -113,14 +113,14 @@ public:
             maxEnchants = 5;
             break;
         case 4: // 紫色(史诗)
-            maxEnchants = 4;
+            maxEnchants = 5;
             break;
         case 3: // 蓝色(精良)
         case 2: // 绿色(优秀)
         case 1: // 白色(普通)
         case 0: // 灰色(粗糙)
         default:
-            maxEnchants = 3;
+            maxEnchants = 4;
             break;
         }
 
@@ -143,7 +143,7 @@ public:
             // 第一条附魔不需要前置条件，后续的附魔需要前一条成功
             if (i == 0)
             {
-                if (rand_chance() < enchantChance[i])
+                if (urand(0, 99) < static_cast<uint32>(enchantChance[i]))
                 {
                     slotRand[i] = getRandEnchantment(item);
                     if (slotRand[i] != -1)
