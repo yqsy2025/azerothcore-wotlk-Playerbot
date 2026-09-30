@@ -571,13 +571,13 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     };
 
     std::vector<SpecialItem> specialItems = {
-        {90003,0.01f,1,1},
-        {60116,0.01f,1,1},
-        {60117,0.01f,1,1},
-        {60118,0.01f,1,1},
-        {60119,0.01f,1,1},
-        {60120,0.01f,1,1},
-        {66606,0.01f,1,3}
+        {90003,0.05f,1,1},
+        {60116,0.05f,1,1},
+        {60117,0.05f,1,1},
+        {60118,0.05f,1,1},
+        {60119,0.05f,1,1},
+        {60120,0.05f,1,1},
+        {66606,0.05f,1,3}
     };
 
 /*    std::vector<SpecialItem> specialItemsH = {

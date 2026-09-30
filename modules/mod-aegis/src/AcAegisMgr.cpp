@@ -1088,7 +1088,7 @@ bool AcAegisMgr::IsEnabledFor(Player* player) const
     if (!cfg.enabledOnGmAccounts && player->IsGameMaster())
         return false;
 
-    if (player->GetSession() && player->GetSession()->IsBot())//机器人禁用
+    if (player->GetSession() && player->GetSession()->IsHeadless())//机器人禁用
         return false;
 
     if (!player->IsAlive() || player->HasGhostAura())//死亡后禁用
@@ -1208,13 +1208,18 @@ bool AcAegisMgr::HasWhitelistedAura(AegisMovementContext const& movementCtx) con
         movementCtx.hasConfiguredAuraWhitelist;
 }
 
-bool AcAegisMgr::ShouldSkipAllMovementDetectors(AegisMovementContext const& movementCtx) const
+bool AcAegisMgr::ShouldSkipAllMovementDetectors(Player* player, AegisMovementContext const& movementCtx) const
 {
+    if (player && player->GetSession() && player->GetSession()->IsHeadless())
+        return true;
+
     return movementCtx.shouldSkipAllDetectors;
 }
 
-bool AcAegisMgr::ShouldSkipAerialMovementDetectors(AegisMovementContext const& movementCtx) const
+bool AcAegisMgr::ShouldSkipAerialMovementDetectors(Player* player, AegisMovementContext const& movementCtx) const
 {
+    if (player && player->GetSession() && player->GetSession()->IsHeadless())
+        return true;
     return movementCtx.shouldSkipAerialDetectors;
 }
 
@@ -1347,13 +1352,13 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectTime(Player* /*player*/, Aeg
     return evidence;
 }
 
-std::optional<AegisEvidenceEvent> AcAegisMgr::DetectForceMove(Player* /*player*/, AegisPlayerContext& ctx, AegisMovementContext const& movementCtx) const
+std::optional<AegisEvidenceEvent> AcAegisMgr::DetectForceMove(Player* player, AegisPlayerContext& ctx, AegisMovementContext const& movementCtx) const
 {
     AegisConfig const& cfg = sAcAegisConfig->Get();
     if (!cfg.forceMoveEnabled || ctx.samples.Size() < 2)
         return std::nullopt;
 
-    if (ShouldSkipAllMovementDetectors(movementCtx))
+    if (ShouldSkipAllMovementDetectors(player,movementCtx))
         return std::nullopt;
 
     AegisMoveSample const& cur = ctx.samples.Newest();
@@ -1391,18 +1396,34 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectForceMove(Player* /*player*/
 
     AegisEvidenceEvent evidence;
     evidence.cheatType = AegisCheatType::Control;
-    evidence.level = (ctx.forceMoveHits >= cfg.forceMoveStrongHits || (dist2d <= (cfg.forceMoveMinDistance2D * 0.25f) && deltaZ <= (cfg.forceMoveMinDeltaZ * 0.25f))) ? AegisEvidenceLevel::Strong : AegisEvidenceLevel::Medium;
+
+    evidence.level =
+        (ctx.forceMoveHits >= (cfg.forceMoveStrongHits + 1) ||
+            (dist2d <= (cfg.forceMoveMinDistance2D * 0.10f) &&
+                deltaZ <= (cfg.forceMoveMinDeltaZ * 0.10f))) ?
+        AegisEvidenceLevel::Strong :
+        AegisEvidenceLevel::Medium;
+
     evidence.tag = "IgnoredKnockback";
-    evidence.detail = "xySpeed=" + std::to_string(cur.jumpXySpeed) + ",zSpeed=" + std::to_string(cur.jumpZSpeed);
-    evidence.riskDelta = ClampRiskDelta(9.0f + std::min(8.0f, cur.jumpXySpeed) + std::min(6.0f, std::fabs(cur.jumpZSpeed)) * 0.5f);
+
+    evidence.detail =
+        "xySpeed=" + std::to_string(cur.jumpXySpeed) +
+        ",zSpeed=" + std::to_string(cur.jumpZSpeed);
+
+    evidence.riskDelta = ClampRiskDelta(
+        4.0f +
+        std::min(5.0f, cur.jumpXySpeed) * 0.5f +
+        std::min(4.0f, std::fabs(cur.jumpZSpeed)) * 0.25f);
+
     evidence.serverMs = cur.serverMs;
     evidence.shouldRollback = false;
     evidence.metricA = dist2d;
     evidence.metricB = expected2d;
+
     return evidence;
 }
 
-std::optional<AegisEvidenceEvent> AcAegisMgr::DetectRootBreak(Player* player,
+/*std::optional<AegisEvidenceEvent> AcAegisMgr::DetectRootBreak(Player* player,
     MovementInfo const& movementInfo, AegisPlayerContext& ctx,
     AegisMovementContext const& movementCtx) const
 {
@@ -1436,6 +1457,13 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectRootBreak(Player* player,
     if (!claimsMoving && hasRootFlag && dist2d < 0.15f && deltaZ < 0.15f)
         return std::nullopt;
 
+    bool suspicious =
+        claimsMoving &&
+        (!hasRootFlag || dist2d >= 0.5f || deltaZ >= 0.5f);
+
+    if (!suspicious)
+        return std::nullopt;
+
     AegisEvidenceEvent evidence;
     evidence.cheatType = AegisCheatType::Control;
     evidence.level = (!hasRootFlag || dist2d >= 1.0f || deltaZ >= 0.75f) ?
@@ -1450,7 +1478,7 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectRootBreak(Player* player,
     evidence.metricA = dist2d;
     evidence.metricB = deltaZ;
     return evidence;
-}
+}*/
 
 std::optional<AegisEvidenceEvent> AcAegisMgr::DetectControlledMove(Player* player,
     AegisPlayerContext& ctx, AegisMovementContext const& movementCtx) const
@@ -1504,18 +1532,118 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectControlledMove(Player* playe
 
     AegisEvidenceEvent evidence;
     evidence.cheatType = AegisCheatType::Control;
-    evidence.level = (ctx.controlledMoveHits >= 3 || elapsedMs >= windowMs) ?
+    evidence.level = (ctx.controlledMoveHits >= 4 || elapsedMs >= windowMs * 2) ?
         AegisEvidenceLevel::Strong : AegisEvidenceLevel::Medium;
     evidence.tag = ControlledMoveTag(ctx.controlledMoveKind);
     evidence.detail = "moved2d=" + std::to_string(moved2d) +
         ",deltaZ=" + std::to_string(deltaZ);
-    evidence.riskDelta = ClampRiskDelta(8.0f +
-        static_cast<float>(ctx.controlledMoveHits) * 3.0f);
+    evidence.riskDelta = ClampRiskDelta(4.0f +
+        static_cast<float>(ctx.controlledMoveHits) * 1.5f);
     evidence.serverMs = cur.serverMs;
     evidence.shouldRollback = false;
     evidence.metricA = moved2d;
     evidence.metricB = ctx.controlledMoveMinDistance2D;
     ClearControlledMoveExpectation(ctx);
+    return evidence;
+}
+
+std::optional<AegisEvidenceEvent> AcAegisMgr::DetectRootBreak(Player* player,
+    MovementInfo const& movementInfo, AegisPlayerContext& ctx,
+    AegisMovementContext const& movementCtx) const
+{
+    if (!player || !player->IsRooted())
+        return std::nullopt;
+
+    if (player->HasUnitState(
+        UNIT_STATE_CONFUSED |
+        UNIT_STATE_FLEEING |
+        UNIT_STATE_CHARMED))
+        return std::nullopt;
+
+    if (movementCtx.isBeingTeleported || movementCtx.isTaxiFlight ||
+        movementCtx.hasTransport || movementCtx.hasVehicle ||
+        movementCtx.recentRootAckGrace ||
+        movementCtx.recentControlledChargeGrace ||
+        movementCtx.recentControlledJumpGrace ||
+        movementCtx.recentControlledPullGrace ||
+        movementCtx.recentControlledTeleportGrace ||
+        movementCtx.recentKnockBackGrace)
+        return std::nullopt;
+
+    bool hasRootFlag = movementInfo.HasMovementFlag(MOVEMENTFLAG_ROOT);
+    bool claimsMoving = movementInfo.HasMovementFlag(MOVEMENTFLAG_MASK_MOVING);
+
+    float dist2d = Dist3DToPoint(
+        movementInfo.pos.GetPositionX(),
+        movementInfo.pos.GetPositionY(),
+        player->GetPositionZ(),
+        player->GetPositionX(),
+        player->GetPositionY(),
+        player->GetPositionZ());
+
+    float deltaZ = std::fabs(
+        movementInfo.pos.GetPositionZ() -
+        player->GetPositionZ());
+
+    if (!claimsMoving)
+        return std::nullopt;
+
+    if (hasRootFlag &&
+        dist2d < 0.5f &&
+        deltaZ < 0.5f)
+        return std::nullopt;
+
+    /*
+     * 只有客户端明确声明移动，并且存在明显位移，
+     * 才继续作为 RootBreak 处理。
+     *
+     * 单纯 ROOT flag 丢失不再判定为作弊。
+     */
+    if (!claimsMoving ||
+        (dist2d < 0.5f && deltaZ < 0.5f))
+        return std::nullopt;
+
+    AegisEvidenceEvent evidence;
+    evidence.cheatType = AegisCheatType::Control;
+
+    /*
+     * Strong：
+     * 必须存在明显实际位移。
+     *
+     * 这样单纯的网络同步造成 ROOT flag 异常，
+     * 不会直接变成 Strong。
+     */
+    evidence.level =(!hasRootFlag || dist2d >= 2.0f || deltaZ >= 1.5f) ?
+        AegisEvidenceLevel::Strong :
+        AegisEvidenceLevel::Medium;
+
+    evidence.tag = "RootBreak";
+
+    evidence.detail =
+        "moving=" + std::to_string(claimsMoving ? 1 : 0) +
+        ",rootFlag=" + std::to_string(hasRootFlag ? 1 : 0);
+
+    /*
+     * 降低单次误判的风险贡献：
+     * Medium = 5
+     * Strong = 14
+     */
+    evidence.riskDelta =
+        ClampRiskDelta(
+            (dist2d >= 1.0f || deltaZ >= 0.75f) ?
+            14.0f : 5.0f);
+
+    evidence.serverMs = _elapsedMs;
+
+    /*
+     * 只有 Strong + 明显位移才允许回滚。
+     */
+    evidence.shouldRollback =
+        (dist2d >= 1.0f || deltaZ >= 0.75f);
+
+    evidence.metricA = dist2d;
+    evidence.metricB = deltaZ;
+
     return evidence;
 }
 
@@ -2084,13 +2212,13 @@ void AcAegisMgr::TouchGatherWindow(Player* player, AegisPlayerContext& ctx, char
         HandleEvidence(player, ctx, *evidence);
 }
 
-std::optional<AegisEvidenceEvent> AcAegisMgr::DetectSpeed(Player* /*player*/, AegisPlayerContext& ctx, AegisMovementContext const& movementCtx) const
+std::optional<AegisEvidenceEvent> AcAegisMgr::DetectSpeed(Player* player, AegisPlayerContext& ctx, AegisMovementContext const& movementCtx) const
 {
     AegisConfig const& cfg = sAcAegisConfig->Get();
     if (!cfg.speedEnabled || ctx.samples.Size() < 2)
         return std::nullopt;
 
-    if (ShouldSkipAllMovementDetectors(movementCtx))
+    if (ShouldSkipAllMovementDetectors(player,movementCtx))
         return std::nullopt;
 
     AegisMoveSample const& cur = ctx.samples.Newest();
@@ -2175,7 +2303,7 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectTeleport(Player* player, Aeg
     if (!cfg.teleportEnabled || !player || ctx.samples.Size() < 2)
         return std::nullopt;
 
-    if (ShouldSkipAllMovementDetectors(movementCtx))
+    if (ShouldSkipAllMovementDetectors(player,movementCtx))
         return std::nullopt;
 
     AegisMoveSample const& cur = ctx.samples.Newest();
@@ -2459,7 +2587,7 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectFly(Player* player, AegisPla
     if (!cfg.flyEnabled || !player || ctx.samples.Size() < 2)
         return std::nullopt;
 
-    if (ShouldSkipAerialMovementDetectors(movementCtx) ||
+    if (ShouldSkipAerialMovementDetectors(player,movementCtx) ||
         HasAuthorizedSpecialMovement(movementCtx))
         return std::nullopt;
 
@@ -2614,7 +2742,7 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectWaterWalk(Player* player, Ae
     if (!cfg.flyEnabled || !player || ctx.samples.Size() < 2)
         return std::nullopt;
 
-    if (!movementCtx.hasMap || ShouldSkipAerialMovementDetectors(movementCtx))
+    if (!movementCtx.hasMap || ShouldSkipAerialMovementDetectors(player,movementCtx))
         return std::nullopt;
 
     AegisMoveSample const& cur = ctx.samples.Newest();
@@ -2827,7 +2955,7 @@ std::optional<AegisEvidenceEvent> AcAegisMgr::DetectClimb(Player* player, AegisP
     if (!cfg.climbEnabled || !player || ctx.samples.Size() < 2)
         return std::nullopt;
 
-    if (ShouldSkipAerialMovementDetectors(movementCtx))
+    if (ShouldSkipAerialMovementDetectors(player,movementCtx))
         return std::nullopt;
 
     AegisMoveSample const& cur = ctx.samples.Newest();
@@ -4104,7 +4232,7 @@ void AcAegisMgr::OnSpellCast(Player* player, Spell* spell, bool /*skipCheck*/)
 {
     if (!player || !spell)
         return;
-    if (player->GetSession() && player->GetSession()->IsBot())//机器人不检测
+    if (player->GetSession() && player->GetSession()->IsHeadless())//机器人不检测
         return;
     AegisPlayerContext& ctx = GetOrCreate(player);
     SpellInfo const* spellInfo = spell->GetSpellInfo();
@@ -4303,7 +4431,7 @@ void AcAegisMgr::OnJumpOpcode(Player* player, bool jump)
 {
     if (!player || !jump)
         return;
-    if (player->GetSession() && player->GetSession()->IsBot())//机器人不检测
+    if (player->GetSession() && player->GetSession()->IsHeadless())//机器人不检测
         return;
     GetOrCreate(player).lastJumpOpcodeMs = _elapsedMs;
 }
@@ -4383,7 +4511,7 @@ void AcAegisMgr::OnPlayerMove(Player* player, MovementInfo movementInfo, uint32 
         movementCtx = BuildMovementContext(player, ctx, _elapsedMs);
     }
 
-    if (ShouldSkipAllMovementDetectors(movementCtx))
+    if (ShouldSkipAllMovementDetectors(player,movementCtx))
         return;
 
     if (std::optional<AegisEvidenceEvent> evidence = DetectTeleport(player, ctx, movementCtx))
@@ -4463,7 +4591,7 @@ bool AcAegisMgr::HandleDoubleJump(Player* player, Unit* mover)
         ctx.doubleJumpHits = 0;
     };
 
-    if (ShouldSkipAerialMovementDetectors(movementCtx))
+    if (ShouldSkipAerialMovementDetectors(player,movementCtx))
     {
         resetDoubleJumpWindow();
         ctx.lastJumpOpcodeMs = nowMs;

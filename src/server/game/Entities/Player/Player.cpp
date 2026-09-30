@@ -2977,6 +2977,13 @@ void Player::SendNewMail()
     WorldPacket data(SMSG_RECEIVED_MAIL, 4);
     data << (uint32) 0;
     SendDirectMessage(&data);
+
+    // The client caches its inbox and refuses to re-query it more than once a minute, so a mailbox
+    // opened inside that window still shows the old list. Pushing the inbox refreshes it in place.
+    // Only when in world: _LoadInventory mails problematic items during login, and that must not
+    // push a mail list to a client that has not finished logging in yet.
+    if (IsInWorld() && sWorld->getBoolConfig(CONFIG_MAIL_PUSH_INBOX_ON_DELIVERY))
+        GetSession()->SendMailList();
 }
 
 void Player::AddNewMailDeliverTime(time_t deliver_time)
@@ -3411,6 +3418,9 @@ bool Player::IsNeedCastPassiveSpellAtLearn(SpellInfo const* spellInfo) const
 
 void Player::learnSpell(uint32 spellId, bool temporary /*= false*/, bool learnFromSkill /*= false*/)
 {
+    if (!sScriptMgr->OnPlayerCanLearnSpell(this, spellId))
+        return;
+
     // Xinef: don't allow to learn active spell once more
     if (HasActiveSpell(spellId))
     {
@@ -5084,15 +5094,6 @@ void Player::CleanupChannels()
         m_channels.erase(m_channels.begin());               // remove from player's channel list
         ch->LeaveChannel(this, false);                     // not send to client, not remove from player's channel list
     }
-}
-
-// Playerbot helper if bot talks in a different locale
-bool Player::IsInChannel(const Channel* c)
-{
-    return std::any_of(m_channels.begin(), m_channels.end(), [c](const Channel* chan)
-    {
-        return c->GetChannelId() == chan->GetChannelId();
-    });
 }
 
 void Player::ClearChannelWatch()
@@ -6774,6 +6775,8 @@ void Player::_ApplyItemMods(Item* item, uint8 slot, bool apply)
         UpdateWeaponDependentAuras(attackType);
 
     ApplyEnchantment(item, apply);
+    //新增的装备升级钩子，应用物品属性后
+    sScriptMgr->OnAfterApplyItemMods(this, item, slot, apply); 
 
     LOG_DEBUG("entities.player.items", "_ApplyItemMods complete.");
 }
@@ -8055,6 +8058,158 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                     group->UpdateLooterGuid(go, true);
 
                 loot->FillLoot(lootid, LootTemplates_Gameobject, this, !groupRules, false, go->GetLootMode(), go);
+                /*
+                 * ============================================================
+                 * GameObject 额外产出系统
+                 *
+                 * 矿物：
+                 *     5% 概率额外获得 1 个本次矿点实际产出的矿物
+                 *
+                 * 草药：
+                 *     5% 概率额外获得 1 个本次草药点实际产出的草药
+                 *
+                 * 注意：
+                 *     不会从数据库随机寻找其他矿物/草药。
+                 *     只从本次已经生成的 Loot 中选择。
+                 *
+                 * SubClass:
+                 *     7 = 矿物
+                 *     9 = 草药
+                 *
+                 * MAX_NR_LOOT_ITEMS = 18
+                 * ============================================================
+                 */
+                 // ============================================================
+                if (!loot->items.empty() &&
+                    loot->items.size() < MAX_NR_LOOT_ITEMS &&
+                    urand(1, 100) <= 5)
+                {
+                    std::vector<uint32> miningItems;
+
+                    // 从本次实际 Loot 中寻找矿物
+                    for (LootItem const& lootItem : loot->items)
+                    {
+                        ItemTemplate const* itemTemplate =
+                            sObjectMgr->GetItemTemplate(lootItem.itemid);
+
+                        if (itemTemplate && itemTemplate->SubClass == 7)
+                        {
+                            miningItems.push_back(lootItem.itemid);
+                        }
+                    }
+
+                    // 本次 Loot 确实有矿物
+                    if (!miningItems.empty())
+                    {
+                        // 从本次实际产出的矿物中随机选择一种
+                        uint32 extraItemId =
+                            miningItems[urand(0, miningItems.size() - 1)];
+
+                        // 找到对应 LootItem
+                        for (LootItem const& lootItem : loot->items)
+                        {
+                            if (lootItem.itemid != extraItemId)
+                                continue;
+
+                            // 复制原来的 LootItem
+                            LootItem extraItem = lootItem;
+
+                            // 额外只增加 1 个
+                            extraItem.count = 1;
+
+                            // 作为新的 Loot 项
+                            extraItem.itemIndex = loot->items.size();
+
+                            // 确保可以正常拾取
+                            extraItem.is_looted = false;
+                            extraItem.is_blocked = false;
+                            extraItem.is_underthreshold = false;
+                            extraItem.is_counted = false;
+                            extraItem.rollWinnerGUID = ObjectGuid::Empty;
+
+                            loot->items.push_back(extraItem);
+
+                            // 普通非 FFA Loot，需要增加未拾取数量
+                            if (!extraItem.freeforall &&
+                                !extraItem.needs_quest &&
+                                extraItem.conditions.empty())
+                            {
+                                ++loot->unlootedCount;
+                            }
+
+                            ChatHandler(this->GetSession()).PSendSysMessage("触发幸运采矿：额外获得了一份矿物！");
+
+                            break;
+                        }
+                    }
+                }
+
+                // ============================================================
+                // 5% 概率额外产出同类草药
+                // ============================================================
+                if (!loot->items.empty() &&
+                    loot->items.size() < MAX_NR_LOOT_ITEMS &&
+                    urand(1, 100) <= 5)
+                {
+                    std::vector<uint32> herbItems;
+
+                    // 从本次实际 Loot 中寻找草药
+                    for (LootItem const& lootItem : loot->items)
+                    {
+                        ItemTemplate const* itemTemplate =
+                            sObjectMgr->GetItemTemplate(lootItem.itemid);
+
+                        if (itemTemplate && itemTemplate->SubClass == 9)
+                        {
+                            herbItems.push_back(lootItem.itemid);
+                        }
+                    }
+
+                    // 本次 Loot 确实有草药
+                    if (!herbItems.empty())
+                    {
+                        // 从本次实际产出的草药中随机选择一种
+                        uint32 extraItemId =
+                            herbItems[urand(0, herbItems.size() - 1)];
+
+                        // 找到对应 LootItem
+                        for (LootItem const& lootItem : loot->items)
+                        {
+                            if (lootItem.itemid != extraItemId)
+                                continue;
+
+                            // 复制原来的 LootItem
+                            LootItem extraItem = lootItem;
+
+                            // 额外只增加 1 个
+                            extraItem.count = 1;
+
+                            // 作为新的 Loot 项
+                            extraItem.itemIndex = loot->items.size();
+
+                            // 确保可以正常拾取
+                            extraItem.is_looted = false;
+                            extraItem.is_blocked = false;
+                            extraItem.is_underthreshold = false;
+                            extraItem.is_counted = false;
+                            extraItem.rollWinnerGUID = ObjectGuid::Empty;
+
+                            loot->items.push_back(extraItem);
+
+                            // 普通非 FFA Loot，需要增加未拾取数量
+                            if (!extraItem.freeforall &&
+                                !extraItem.needs_quest &&
+                                extraItem.conditions.empty())
+                            {
+                                ++loot->unlootedCount;
+                            }
+
+                            ChatHandler(this->GetSession()).PSendSysMessage("触发幸运采药：额外获得了一份草药！");
+
+                            break;
+                        }
+                    }
+                }
                 go->SetLootGenerationTime();
 
                 // get next RR player (for next loot)
@@ -10023,8 +10178,11 @@ void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* s
 
         // skip if already instant or cost is free
         if (mod->op == SPELLMOD_CASTING_TIME || mod->op == SPELLMOD_COST)
-            if (((float)basevalue + (float)basevalue * (totalmul - 1.0f) + (float)totalflat) <= 0)
+        {
+            float currentVal = ((float)basevalue + (float)totalflat) * totalmul;
+            if (currentVal <= 0.0f)
                 return;
+        }
 
         if (mod->type == SPELLMOD_FLAT)
         {
@@ -10078,7 +10236,7 @@ void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* s
         calculateSpellMod(mod);
     }
 
-    if (op == SPELLMOD_CASTING_TIME || op == SPELLMOD_DURATION)
+    if (op == SPELLMOD_CASTING_TIME || op == SPELLMOD_DURATION || op == SPELLMOD_COST)
         basevalue = (basevalue + totalflat) > 0 ? (basevalue + totalflat) * totalmul : 0;
     else
         basevalue = (basevalue * totalmul) + totalflat;
@@ -10200,8 +10358,6 @@ void Player::RemoveSpellMods(Spell* spell)
     if (spell->m_appliedMods.empty())
         return;
 
-    SpellInfo const* const spellInfo = spell->m_spellInfo;
-
     for (uint8 i = 0; i < MAX_SPELLMOD; ++i)
     {
         for (SpellModContainer::const_iterator itr = m_spellMods[i].begin(); itr != m_spellMods[i].end();)
@@ -10229,16 +10385,6 @@ void Player::RemoveSpellMods(Spell* spell)
             // leave this here, if spell have two mods it will remove 2 charges - wrong
             spell->m_appliedMods.erase(iterMod);
 
-            // MAGE T8P4 BONUS
-            if (spellInfo->SpellFamilyName == SPELLFAMILY_MAGE)
-            {
-                SpellInfo const* sp = mod->ownerAura->GetSpellInfo();
-                // Missile Barrage, Hot Streak, Brain Freeze (trigger spell - Fireball!)
-                if (sp->SpellIconID == 3261 || sp->SpellIconID == 2999 || sp->SpellIconID == 2938)
-                    if (AuraEffect* aurEff = GetAuraEffectDummy(64869))
-                        if (roll_chance_i(aurEff->GetAmount()))
-                            continue; // don't consume charge
-            }
             if (mod->ownerAura->DropCharge(AURA_REMOVE_BY_EXPIRE))
                 itr = m_spellMods[i].begin();
         }
@@ -10416,7 +10562,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
         return false;
 
     // not let cheating with start flight in time of logout process || while in combat || has type state: stunned || has type state: root
-    if (GetSession()->isLogingOut() || IsInCombat() || HasUnitState(UNIT_STATE_STUNNED) || HasUnitState(UNIT_STATE_ROOT))
+    if (GetSession()->IsLoggingOut() || IsInCombat() || HasUnitState(UNIT_STATE_STUNNED) || HasUnitState(UNIT_STATE_ROOT))
     {
         GetSession()->SendActivateTaxiReply(ERR_TAXIPLAYERBUSY);
         return false;
@@ -12016,6 +12162,17 @@ void Player::ApplyEquipCooldown(Item* pItem)
     if (GetCommandStatus(CHEAT_COOLDOWN))
         return;
 
+    TimePoint const cooldownStart = std::chrono::steady_clock::now();
+    auto applyProcCooldown = [this, pItem, cooldownStart](uint32 spellId)
+    {
+        SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(spellId);
+        if (!procEntry)
+            return;
+
+        if (Aura* itemAura = GetAura(spellId, GetGUID(), pItem->GetGUID()))
+            itemAura->AddProcCooldown(cooldownStart + procEntry->Cooldown);
+    };
+
     for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
     {
         _Spell const& spellData = pItem->GetTemplate()->Spells[i];
@@ -12027,12 +12184,7 @@ void Player::ApplyEquipCooldown(Item* pItem)
         // apply proc cooldown to equip auras if we have any
         if (spellData.SpellTrigger == ITEM_SPELLTRIGGER_ON_EQUIP)
         {
-            SpellProcEntry const* procEntry = sSpellMgr->GetSpellProcEntry(spellData.SpellId);
-            if (!procEntry)
-                continue;
-
-            if (Aura* itemAura = GetAura(spellData.SpellId, GetGUID(), pItem->GetGUID()))
-                itemAura->AddProcCooldown(std::chrono::steady_clock::now() + procEntry->Cooldown);
+            applyProcCooldown(spellData.SpellId);
             continue;
         }
 
@@ -12060,6 +12212,22 @@ void Player::ApplyEquipCooldown(Item* pItem)
         data << pItem->GetGUID();
         data << uint32(spellData.SpellId);
         SendDirectMessage(&data);
+    }
+
+    // Enchantment equip spells are not included in the item template spell list.
+    for (uint8 enchantmentSlot = 0; enchantmentSlot < MAX_ENCHANTMENT_SLOT; ++enchantmentSlot)
+    {
+        uint32 enchantmentId = pItem->GetEnchantmentId(EnchantmentSlot(enchantmentSlot));
+        if (!enchantmentId)
+            continue;
+
+        SpellItemEnchantmentEntry const* enchantment = sSpellItemEnchantmentStore.LookupEntry(enchantmentId);
+        if (!enchantment)
+            continue;
+
+        for (uint8 effect = 0; effect < MAX_SPELL_ITEM_ENCHANTMENT_EFFECTS; ++effect)
+            if (enchantment->type[effect] == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL && enchantment->spellid[effect])
+                applyProcCooldown(enchantment->spellid[effect]);
     }
 }
 
@@ -13159,13 +13327,11 @@ void Player::SetClientControl(Unit* target, bool allowMove, bool packetOnly /*= 
         return;
     }
 
-    // still affected by some aura that shouldn't allow control, only allow on last such aura to be removed
-    if (target->HasUnitState(UNIT_STATE_FLEEING | UNIT_STATE_CONFUSED))
-        allowMove = false;
-
+    // A fleeing/confused target can't be controlled by the client yet, but the mover
+    // must still switch so control is restored once the crowd control ends.
     WorldPacket data(SMSG_CLIENT_CONTROL_UPDATE, target->GetPackGUID().size() + 1);
     data << target->GetPackGUID();
-    data << uint8(allowMove ? 1 : 0);
+    data << uint8((allowMove && !target->HasUnitState(UNIT_STATE_FLEEING | UNIT_STATE_CONFUSED)) ? 1 : 0);
     SendDirectMessage(&data);
 
     // We want to set the packet only

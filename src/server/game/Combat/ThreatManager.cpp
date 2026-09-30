@@ -400,6 +400,15 @@ void ThreatManager::AddThreat(Unit* target, float amount, SpellInfo const* spell
             return;
     }
 
+    // while riding a vehicle, all threat goes to the vehicle, not the pilot
+    if (Unit* vehicle = target->GetVehicleBase())
+    {
+        AddThreat(vehicle, amount, spell, ignoreModifiers, ignoreRedirects);
+        if (target->HasUnitTypeMask(UNIT_MASK_ACCESSORY)) // accessories are fully treated as components of the parent and cannot have threat
+            return;
+        amount = 0.0f;
+    }
+
     // if we cannot actually have a threat list, we instead just set combat state and avoid creating threat refs altogether
     if (!CanHaveThreatList())
     {
@@ -682,9 +691,6 @@ ThreatReference const* ThreatManager::ReselectVictim()
 
 void ThreatManager::ProcessAIUpdates()
 {
-    Creature* creature = _owner->ToCreature();
-    if (!creature)
-        return;
     CreatureAI* ai = ASSERT_NOTNULL(_owner->ToCreature())->AI();
     std::vector<ObjectGuid> v(std::move(_needsAIUpdate)); // _needsAIUpdate is now empty in case this triggers a recursive call
     if (!ai)

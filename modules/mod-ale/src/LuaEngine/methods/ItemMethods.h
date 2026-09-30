@@ -377,13 +377,29 @@ namespace LuaItem
     {
         uint32 enchant_slot = ALE::CHECKVAL<uint32>(L, 2);
 
-        if (enchant_slot >= MAX_INSPECTED_ENCHANTMENT_SLOT)
+        if (enchant_slot >= MAX_ENCHANTMENT_SLOT)
             return luaL_argerror(L, 2, "valid EnchantmentSlot expected");
 
         ALE::Push(L, item->GetEnchantmentId(EnchantmentSlot(enchant_slot)));
         return 1;
     }
 
+    int ApplyItemMods(lua_State* L, Item* item)
+    {
+        // 参数 1 是 self（Item 对象），参数 2 是 slot，参数 3 是 apply
+        uint8 slot = ALE::CHECKVAL<uint8>(L, 2);
+        bool  apply = ALE::CHECKVAL<bool>(L, 3);
+
+        if (slot >= EQUIPMENT_SLOT_END)
+            return luaL_argerror(L, 2, "valid EquipmentSlot expected");
+
+        Player* owner = item->GetOwner();
+        if (!owner)
+            return luaL_argerror(L, 1, "item has no owner");
+
+        owner->_ApplyItemMods(item, slot, apply);
+        return 0;
+    }
     /**
      * Returns the spell ID tied to the [Item] by spell index
      *

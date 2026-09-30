@@ -228,7 +228,7 @@ std::string const ChatHelper::formatMoney(uint32 copper)
     return out.str();
 }
 
-std::string ChatHelper::parseValue(const std::string& type, const std::string& text)
+std::string ChatHelper::parseValue(std::string const& type, std::string const& text)
 {
     std::string retString;
 
@@ -253,7 +253,7 @@ uint32 ChatHelper::parseMoney(std::string const text)
     // if user specified money in ##g##s##c format
     std::string acum = "";
     uint32 copper = 0;
-    for (uint8 i = 0; i < text.length(); i++)
+    for (size_t i = 0; i < text.length(); i++)
     {
         if (text[i] == 'g')
         {
@@ -287,7 +287,7 @@ ItemIds ChatHelper::parseItems(std::string const text)
 {
     ItemIds itemIds;
 
-    uint8 pos = 0;
+    size_t pos = 0;
     while (true)
     {
         auto i = text.find("Hitem:", pos);
@@ -379,7 +379,7 @@ std::string const ChatHelper::FormatQuest(Quest const* quest)
 std::string const ChatHelper::FormatGameobject(GameObject* go)
 {
     std::ostringstream out;
-    out << "|cFFFFFF00|Hfound:" << go->GetGUID().GetRawValue() << ":" << go->GetEntry() << ":"
+    out << "|cffffff00|Hfound:" << go->GetGUID().GetRawValue() << ":" << go->GetEntry() << ":"
         << "|h[" << go->GetNameForLocaleIdx(sWorld->GetDefaultDbcLocale()) << "]|h|r";
     return out.str();
 }
@@ -387,7 +387,7 @@ std::string const ChatHelper::FormatGameobject(GameObject* go)
 std::string const ChatHelper::FormatWorldobject(WorldObject* wo)
 {
     std::ostringstream out;
-    out << "|cFFFFFF00|Hfound:" << wo->GetGUID().GetRawValue() << ":" << wo->GetEntry() << ":"
+    out << "|cffffff00|Hfound:" << wo->GetGUID().GetRawValue() << ":" << wo->GetEntry() << ":"
         << "|h[";
     out << (wo->ToGameObject() ? ((GameObject*)wo)->GetNameForLocaleIdx(sWorld->GetDefaultDbcLocale())
                                : wo->GetNameForLocaleIdx(sWorld->GetDefaultDbcLocale()))
@@ -435,7 +435,7 @@ std::string const ChatHelper::FormatItem(ItemTemplate const* proto, uint32 count
     snprintf(color, sizeof(color), "%x", ItemQualityColors[proto->Quality]);
 
     std::string itemName;
-    const ItemLocale* locale = sObjectMgr->GetItemLocale(proto->ItemId);
+    ItemLocale const* locale = sObjectMgr->GetItemLocale(proto->ItemId);
 
     if (locale && locale->Name.size() > sWorld->GetDefaultDbcLocale())
         itemName = locale->Name[sWorld->GetDefaultDbcLocale()];
@@ -509,7 +509,7 @@ GuidVector ChatHelper::parseGameobjects(std::string const text)
     //    |cFFFFFF00|Hfound:" << guid << ':'  << entry << ':'  <<  "|h[" << gInfo->name << "]|h|r";
     //    |cFFFFFF00|Hfound:9582:1731|h[Copper Vein]|h|r
 
-    uint8 pos = 0;
+    size_t pos = 0;
     while (true)
     {
         // extract GO guid
@@ -722,12 +722,12 @@ std::set<uint32> extractGeneric(std::string_view text, std::string_view prefix)
     return ids;
 }
 
-std::set<uint32> ChatHelper::ExtractAllQuestIds(const std::string& text)
+std::set<uint32> ChatHelper::ExtractAllQuestIds(std::string const& text)
 {
     return extractGeneric(text, "Hquest:");
 }
 
-std::set<uint32> ChatHelper::ExtractAllItemIds(const std::string& text)
+std::set<uint32> ChatHelper::ExtractAllItemIds(std::string const& text)
 {
     return extractGeneric(text, "Hitem:");
 }

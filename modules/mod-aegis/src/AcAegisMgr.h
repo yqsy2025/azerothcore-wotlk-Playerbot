@@ -118,8 +118,8 @@ private:
     bool CanSafelyTeleportForPunish(Player* player) const;
     AegisMovementContext BuildMovementContext(Player* player, AegisPlayerContext const& ctx, uint32 nowMs) const;
     bool HasWhitelistedAura(AegisMovementContext const& movementCtx) const;
-    bool ShouldSkipAllMovementDetectors(AegisMovementContext const& movementCtx) const;
-    bool ShouldSkipAerialMovementDetectors(AegisMovementContext const& movementCtx) const;
+    bool ShouldSkipAllMovementDetectors(Player* player, AegisMovementContext const& movementCtx) const;
+    bool ShouldSkipAerialMovementDetectors(Player* player, AegisMovementContext const& movementCtx) const;
     float ComputeAllowedSpeed(Player* player, MovementInfo const& movementInfo) const;
     void CaptureSample(Player* player, MovementInfo const& movementInfo, uint32 opcode, AegisPlayerContext& ctx);
     void MaybeUpdateSafePosition(Player* player, AegisPlayerContext& ctx, AegisMoveSample const& sample);

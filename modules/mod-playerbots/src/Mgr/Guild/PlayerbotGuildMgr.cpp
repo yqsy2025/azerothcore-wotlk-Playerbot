@@ -5,6 +5,7 @@
  */
 
 #include "PlayerbotGuildMgr.h"
+#include "CharacterCache.h"
 #include "DatabaseEnv.h"
 #include "Guild.h"
 #include "GuildMgr.h"
@@ -16,7 +17,7 @@ void PlayerbotGuildMgr::Init()
 {
     _guildCache.clear();
     if (sPlayerbotAIConfig.deleteRandomBotGuilds)
-        DeleteBotGuilds();
+        DeleteRandomBotGuilds();
 
     LoadGuildNames();
     ValidateGuildCache();
@@ -62,27 +63,7 @@ bool PlayerbotGuildMgr::SetGuildEmblem(uint32 guildId)
     br = urand(0, 7);
     st = urand(0, 180);
 
-    LOG_DEBUG("playerbots",
-        "[TABARD] new guild id={} random -> style={}, color={}, borderStyle={}, borderColor={}, bgColor={}",
-        guild->GetId(), st, cl, br, bc, bg);
-
-    // populate guild table with a random tabard design
-    CharacterDatabase.Execute(
-        "UPDATE guild SET EmblemStyle={}, EmblemColor={}, BorderStyle={}, BorderColor={}, BackgroundColor={} "
-        "WHERE guildid={}",
-        st, cl, br, bc, bg, guild->GetId());
-    LOG_DEBUG("playerbots", "[TABARD] UPDATE done for guild id={}", guild->GetId());
-
-    // Immediate reading for log
-    if (QueryResult qr = CharacterDatabase.Query(
-            "SELECT EmblemStyle,EmblemColor,BorderStyle,BorderColor,BackgroundColor FROM guild WHERE guildid={}",
-            guild->GetId()))
-    {
-        Field* f = qr->Fetch();
-        LOG_DEBUG("playerbots",
-            "[TABARD] DB check guild id={} => style={}, color={}, borderStyle={}, borderColor={}, bgColor={}",
-            guild->GetId(), f[0].Get<uint8>(), f[1].Get<uint8>(), f[2].Get<uint8>(), f[3].Get<uint8>(), f[4].Get<uint8>());
-    }
+    guild->HandleSetEmblem(EmblemInfo(st, cl, br, bc, bg));
     return true;
 }
 
@@ -110,7 +91,7 @@ std::string PlayerbotGuildMgr::AssignToGuild(Player* player)
 
     size_t count = std::count_if(
         _guildCache.begin(), _guildCache.end(),
-        [](const std::pair<const uint32, GuildCache>& pair)
+        [](std::pair<const uint32, GuildCache> const& pair)
         {
             return !pair.second.hasRealPlayer;
         }
@@ -245,29 +226,32 @@ void PlayerbotGuildMgr::ValidateGuildCache()
     }
 }
 
-void PlayerbotGuildMgr::DeleteBotGuilds()
+void PlayerbotGuildMgr::DeleteRandomBotGuilds()
 {
-    LOG_INFO("playerbots", "Deleting random bot guilds...");
-    std::vector<uint32> randomBots;
+    LOG_INFO("playerbots", "Deleting randombot guilds...");
+    std::vector<uint32> guildsToDisband;
 
-    PlayerbotsDatabasePreparedStatement* stmt = PlayerbotsDatabase.GetPreparedStatement(PLAYERBOTS_SEL_RANDOM_BOTS_BOT);
-    stmt->SetData(0, "add");
-    if (PreparedQueryResult result = PlayerbotsDatabase.Query(stmt))
+    if (QueryResult result = CharacterDatabase.Query("SELECT guildid, leaderguid FROM guild"))
     {
         do
         {
             Field* fields = result->Fetch();
-            uint32 bot = fields[0].Get<uint32>();
-            randomBots.push_back(bot);
+            uint32 guildId = fields[0].Get<uint32>();
+            ObjectGuid leader = ObjectGuid::Create<HighGuid::Player>(fields[1].Get<uint32>());
+
+            // The leader's account is checked instead of the 'add' event or anything else that depends on the
+            // bot being online.
+            if (sPlayerbotAIConfig.IsInRandomAccountList(sCharacterCache->GetCharacterAccountIdByGuid(leader)))
+                guildsToDisband.push_back(guildId);
         } while (result->NextRow());
     }
 
-    for (std::vector<uint32>::iterator i = randomBots.begin(); i != randomBots.end(); ++i)
+    for (uint32 guildId : guildsToDisband)
     {
-        if (Guild* guild = sGuildMgr->GetGuildByLeader(ObjectGuid::Create<HighGuid::Player>(*i)))
+        if (Guild* guild = sGuildMgr->GetGuildById(guildId))
             guild->Disband();
     }
-    LOG_INFO("playerbots", "Random bot guilds deleted");
+    LOG_INFO("playerbots", "Randombot guilds deleted");
 }
 
 bool PlayerbotGuildMgr::IsRealGuild(Player* bot)

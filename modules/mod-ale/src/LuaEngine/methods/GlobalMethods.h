@@ -1458,8 +1458,12 @@ namespace LuaGlobalFunctions
         const char* query = ALE::CHECKVAL<const char*>(L, 1);
 
         int numArgs = lua_gettop(L);
+        std::string formattedQuery;
         if (numArgs > 1)
-            query = ALE::FormatQuery(L, query).c_str();
+        {
+            formattedQuery = ALE::FormatQuery(L, query, WorldDatabase);
+            query = formattedQuery.c_str();
+        }
 
         ALEQuery result = WorldDatabase.Query(query);
         if (result)
@@ -1511,8 +1515,12 @@ namespace LuaGlobalFunctions
         const char* query = ALE::CHECKVAL<const char*>(L, 1);
 
         int numArgs = lua_gettop(L);
+        std::string formattedQuery;
         if (numArgs > 1)
-            query = ALE::FormatQuery(L, query).c_str();
+        {
+            formattedQuery = ALE::FormatQuery(L, query, WorldDatabase);
+            query = formattedQuery.c_str();
+        }
 
         WorldDatabase.Execute(query);
         return 0;
@@ -1535,8 +1543,12 @@ namespace LuaGlobalFunctions
         const char* query = ALE::CHECKVAL<const char*>(L, 1);
 
         int numArgs = lua_gettop(L);
+        std::string formattedQuery;
         if (numArgs > 1)
-            query = ALE::FormatQuery(L, query).c_str();
+        {
+            formattedQuery = ALE::FormatQuery(L, query, CharacterDatabase);
+            query = formattedQuery.c_str();
+        }
 
         QueryResult result = CharacterDatabase.Query(query);
         if (result)
@@ -1581,8 +1593,12 @@ namespace LuaGlobalFunctions
         const char* query = ALE::CHECKVAL<const char*>(L, 1);
 
         int numArgs = lua_gettop(L);
+        std::string formattedQuery;
         if (numArgs > 1)
-            query = ALE::FormatQuery(L, query).c_str();
+        {
+            formattedQuery = ALE::FormatQuery(L, query, CharacterDatabase);
+            query = formattedQuery.c_str();
+        }
 
         CharacterDatabase.Execute(query);
         return 0;
@@ -1605,8 +1621,12 @@ namespace LuaGlobalFunctions
         const char* query = ALE::CHECKVAL<const char*>(L, 1);
 
         int numArgs = lua_gettop(L);
+        std::string formattedQuery;
         if (numArgs > 1)
-            query = ALE::FormatQuery(L, query).c_str();
+        {
+            formattedQuery = ALE::FormatQuery(L, query, LoginDatabase);
+            query = formattedQuery.c_str();
+        }
 
         QueryResult result = LoginDatabase.Query(query);
         if (result)
@@ -1651,8 +1671,12 @@ namespace LuaGlobalFunctions
         const char* query = ALE::CHECKVAL<const char*>(L, 1);
 
         int numArgs = lua_gettop(L);
+        std::string formattedQuery;
         if (numArgs > 1)
-            query = ALE::FormatQuery(L, query).c_str();
+        {
+            formattedQuery = ALE::FormatQuery(L, query, LoginDatabase);
+            query = formattedQuery.c_str();
+        }
             
         LoginDatabase.Execute(query);
         return 0;

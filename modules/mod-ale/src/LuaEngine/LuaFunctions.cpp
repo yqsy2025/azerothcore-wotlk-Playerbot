@@ -992,6 +992,7 @@ ALERegister<Item> ItemMethods[] =
     { "GetSlot", &LuaItem::GetSlot },
     { "GetBagSlot", &LuaItem::GetBagSlot },
     { "GetEnchantmentId", &LuaItem::GetEnchantmentId },
+    { "ApplyItemMods", &LuaItem::ApplyItemMods },
     { "GetSpellId", &LuaItem::GetSpellId },
     { "GetSpellTrigger", &LuaItem::GetSpellTrigger },
     { "GetItemLink", &LuaItem::GetItemLink },

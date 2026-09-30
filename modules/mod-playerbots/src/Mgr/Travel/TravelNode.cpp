@@ -5,6 +5,7 @@
  */
 
 #include "TravelNode.h"
+#include "PlayerbotsDatabase.h"
 #include "BudgetValues.h"
 #include "PathGenerator.h"
 #include "Playerbots.h"
@@ -1210,7 +1211,6 @@ TravelNodeRoute TravelNodeMap::getRoute(TravelNode* start, TravelNode* goal, Pla
             if (homeNode)
             {
                 PortalNode* portNode = (PortalNode*)TravelNodeMap::instance().teleportNodes[bot->GetGUID()][8690];
-                if (!portNode)
                 {
                     portNode = new PortalNode(start);
 
@@ -1342,7 +1342,6 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
         TravelNode* endNode = endNodes[endI];
 
         WorldPosition startNodePosition = *startNode->getPosition();
-        WorldPosition endNodePosition = *endNode->getPosition();
 
         float maxStartDistance = startNode->isTransport() ? 20.0f : sPlayerbotAIConfig.targetPosRecalcDistance;
 
@@ -1378,7 +1377,6 @@ TravelNodeRoute TravelNodeMap::getRoute(WorldPosition startPos, WorldPosition en
     {
         startPath.clear();
         TravelNode* botNode = TravelNodeMap::instance().teleportNodes[bot->GetGUID()][0];
-        if (!botNode)
         {
             botNode = new TravelNode(startPos, "Bot Pos", false);
             TravelNodeMap::instance().teleportNodes[bot->GetGUID()][0] = botNode;
@@ -2496,7 +2494,6 @@ void TravelNodeMap::BuildTaxiGraph()
             continue;
 
         tempGraph[path->from].insert(path->to);
-        tempGraph[path->to].insert(path->from);
     }
     for (auto const& [node, neighbors] : tempGraph)
         taxiGraph[node] = std::vector<uint32>(neighbors.begin(), neighbors.end());
@@ -2506,7 +2503,10 @@ void TravelNodeMap::ComputeAllPaths()
 {
     std::set<uint32> allNodes;
     for (auto const& [source, neighbors] : taxiGraph)
+    {
         allNodes.insert(source);
+        allNodes.insert(neighbors.begin(), neighbors.end());
+    }
 
     for (uint32 source : allNodes)
     {
@@ -2539,7 +2539,11 @@ std::unordered_map<uint32, uint32> TravelNodeMap::BFS(uint32 fromNode)
         uint32 current = workQueue.front();
         workQueue.pop();
 
-        for (uint32 next : taxiGraph.at(current))
+        auto graphItr = taxiGraph.find(current);
+        if (graphItr == taxiGraph.end())
+            continue;
+
+        for (uint32 next : graphItr->second)
         {
             if (visited.count(next))
                 continue;
@@ -2553,7 +2557,7 @@ std::unordered_map<uint32, uint32> TravelNodeMap::BFS(uint32 fromNode)
 }
 
 std::vector<uint32> TravelNodeMap::BuildPath(uint32 fromNode, uint32 toNode,
-                                              const std::unordered_map<uint32, uint32>& parentMap)
+                                              std::unordered_map<uint32, uint32> const& parentMap)
 {
     if (!parentMap.count(toNode))
         return {}; // unreachable
