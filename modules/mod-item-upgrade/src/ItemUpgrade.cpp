@@ -46,9 +46,7 @@ ItemTemplate ItemUpgradePlayerScript::GetUpgradeItemInstance(Item* item, QueryRe
     ItemTemplate const* itemTemplate = item->GetTemplate();
     ItemTemplate itemInstance = *itemTemplate;
 
-    // 清零副本
-    itemInstance.Damage->DamageMin = 0;
-    itemInstance.Damage->DamageMax = 0;
+    // 清零需要重算的字段（不要动 Delay，它默认继承原值）
     itemInstance.Armor = 0;
 
     for (uint8 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
@@ -65,27 +63,39 @@ ItemTemplate ItemUpgradePlayerScript::GetUpgradeItemInstance(Item* item, QueryRe
 
     if (incRatio > 0)
     {
-        // incRatio = 10 表示 +10%，最终值 = 原值 × (1 + incRatio / 100)
+        // incRatio = 10 表示 +10%
+        // 若希望 DPS 净增 10%，用 sqrt；若接受 DPS 涨 m²，直接用 multiplier
         double multiplier = 1.0 + static_cast<double>(incRatio) / 100.0;
 
-        int32 minDamage = itemTemplate->Damage->DamageMin;
-        int32 maxDamage = itemTemplate->Damage->DamageMax;
-
-        if (minDamage > 0 && maxDamage > 0)
+        // ---- 伤害（处理所有段）----
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
         {
-            itemInstance.Damage->DamageMin = static_cast<int32>(std::ceil(
-                static_cast<double>(minDamage) * multiplier));
-            itemInstance.Damage->DamageMax = static_cast<int32>(std::ceil(
-                static_cast<double>(maxDamage) * multiplier));
+            int32 minDamage = itemTemplate->Damage[i].DamageMin;
+            int32 maxDamage = itemTemplate->Damage[i].DamageMax;
+
+            if (minDamage > 0 && maxDamage > 0)
+            {
+                itemInstance.Damage[i].DamageMin = static_cast<int32>(std::ceil(minDamage * multiplier));
+                itemInstance.Damage[i].DamageMax = static_cast<int32>(std::ceil(maxDamage * multiplier));
+            }
         }
 
+        // ---- 攻速（Delay 越小越快，所以除以 multiplier）----
+        if (itemTemplate->Delay > 0)
+        {
+            uint32 newDelay = static_cast<uint32>(std::ceil(
+                static_cast<double>(itemTemplate->Delay) / multiplier));
+            if (newDelay < 200)
+                newDelay = 200;
+            itemInstance.Delay = newDelay;
+        }
+
+        // ---- 护甲 ----
         int32 armor = itemTemplate->Armor;
         if (armor > 0)
-        {
-            itemInstance.Armor = static_cast<int32>(std::ceil(
-                static_cast<double>(armor) * multiplier));
-        }
+            itemInstance.Armor = static_cast<int32>(std::ceil(armor * multiplier));
 
+        // ---- 属性 ----
         for (uint8 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
         {
             if (i >= itemTemplate->StatsCount)
@@ -95,12 +105,9 @@ ItemTemplate ItemUpgradePlayerScript::GetUpgradeItemInstance(Item* item, QueryRe
             if (value == 0)
                 continue;
 
-            itemInstance.ItemStat[i].ItemStatValue = static_cast<int32>(std::ceil(
-                static_cast<double>(value) * multiplier));
+            itemInstance.ItemStat[i].ItemStatValue = static_cast<int32>(std::ceil(value * multiplier));
         }
     }
-
-    itemInstance.Delay = 0;
 
     return itemInstance;
 }
