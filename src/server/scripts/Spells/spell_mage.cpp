@@ -1634,6 +1634,75 @@ class spell_mage_deep_freeze_immunity_state : public AuraScript
     }
 };
 
+// 300181 - Custom Mana Barrier法术协调
+class spell_mage_mana_barrier_custom : public AuraScript
+{
+    PrepareAuraScript(spell_mage_mana_barrier_custom);
+
+    bool Load() override
+    {
+        return GetSpellInfo()->Id == 300181;
+    }
+
+    void Absorb(
+        AuraEffect* /*aurEff*/,
+        DamageInfo& dmgInfo,
+        uint32& absorbAmount)
+    {
+        Player* player = GetTarget()->ToPlayer();
+        if (!player)
+            return;
+
+        uint32 maxMana = player->GetMaxPower(POWER_MANA);
+        uint32 currentMana = player->GetPower(POWER_MANA);
+
+        // 没有最大法力或当前法力，无法吸收
+        if (maxMana == 0 || currentMana == 0)
+            return;
+
+        // 法力 <= 25% 时完全停止吸收
+        if (currentMana * 100 <= maxMana * 25)
+            return;
+
+        uint32 damage = dmgInfo.GetDamage();
+        if (damage == 0)
+            return;
+
+        // 吸收比例 = 当前法力百分比
+        float manaPercent =
+            static_cast<float>(currentMana) /
+            static_cast<float>(maxMana);
+
+        // 例如当前 80% 法力，1000 伤害 -> 吸收 800
+        uint32 absorb =
+            static_cast<uint32>(
+                damage * manaPercent
+                );
+
+        // 吸收量不能超过当前法力
+        absorb = std::min(absorb, currentMana);
+
+        if (absorb == 0)
+            return;
+
+        // 吸收多少，就消耗多少法力
+        absorbAmount = absorb;
+
+        player->ModifyPower(
+            POWER_MANA,
+            -static_cast<int32>(absorb)
+        );
+    }
+
+    void Register() override
+    {
+        OnEffectAbsorb += AuraEffectAbsorbFn(
+            spell_mage_mana_barrier_custom::Absorb,
+            EFFECT_0
+        );
+    }
+};
+
 void AddSC_mage_spell_scripts()
 {
     RegisterSpellScript(spell_mage_arcane_blast);
@@ -1679,4 +1748,5 @@ void AddSC_mage_spell_scripts()
     RegisterSpellScript(spell_mage_fingers_of_frost);
     RegisterSpellScript(spell_mage_magic_absorption);
     RegisterSpellScript(spell_mage_deep_freeze_immunity_state);
+    RegisterSpellScript(spell_mage_mana_barrier_custom);
 }
